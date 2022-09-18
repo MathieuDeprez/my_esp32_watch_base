@@ -1,0 +1,9 @@
+[submodule "components/lvgl"]
+	path = components/lvgl
+	url = https://github.com/lvgl/lvgl.git
+[submodule "components/C_AXP202X_Library"]
+	path = components/C_AXP202X_Library
+	url = https://github.com/MathieuDeprez/C_AXP202X_Library.git
+[submodule "components/lvgl_esp32_drivers"]
+	path = components/lvgl_esp32_drivers
+	url = https://github.com/MathieuDeprez/lvgl_esp32_drivers.git
