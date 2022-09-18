@@ -7,6 +7,13 @@
 
 #define LV_TICK_PERIOD_MS 2
 
+#define DELAY_BETWEEN_LV(X)                                     \
+    xSemaphoreGive(xGuiSemaphore);                              \
+    }                                                           \
+    vTaskDelay(X);                                              \
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)) \
+    {
+
 //#define DISPLAY_TOUCH_LIMIT
 
 class WatchTft
@@ -68,6 +75,7 @@ private:
     static uint8_t s_battery_percent;
 
     // chart power
+    static lv_obj_t *lcd_power_screen;
     static lv_obj_t *chart_power;
     static lv_obj_t *label_chart_usb;
     static lv_obj_t *label_chart_bat;
@@ -78,13 +86,14 @@ private:
     static lv_obj_t *button_menu;
     static lv_obj_t *lcd_turn_off_screen;
     static lv_obj_t *lcd_reset_screen;
-    static lv_obj_t *lcd_power_screen;
     static lv_obj_t *lcd_sleep_screen;
 
     static bool screen_en;
     static uint8_t bl_value;
     static disp_backlight_h bckl_handle;
+    static lv_style_t img_recolor_white_style;
 
+    static SemaphoreHandle_t xGuiSemaphore;
     static QueueHandle_t xQueueLcdCmd;
 
     static void lv_tick_task(void *arg);

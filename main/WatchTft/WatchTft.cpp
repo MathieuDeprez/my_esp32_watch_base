@@ -5,16 +5,9 @@ QueueHandle_t WatchTft::xQueueLcdCmd;
 /* Creates a semaphore to handle concurrent call to lvgl stuff
  * If you wish to call *any* lvgl function from other threads/tasks
  * you should lock on the very same semaphore! */
-SemaphoreHandle_t xGuiSemaphore;
+SemaphoreHandle_t WatchTft::xGuiSemaphore;
 
-#define DELAY_BETWEEN_LV(X)                                     \
-    xSemaphoreGive(xGuiSemaphore);                              \
-    }                                                           \
-    vTaskDelay(X);                                              \
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)) \
-    {
-
-lv_style_t img_recolor_white_style;
+lv_style_t WatchTft::img_recolor_white_style;
 
 disp_backlight_h WatchTft::bckl_handle;
 uint8_t WatchTft::bl_value = 75;
@@ -29,18 +22,10 @@ lv_obj_t *WatchTft::slider_top_bl;
 lv_obj_t *WatchTft::main_slider_top_bl;
 uint8_t WatchTft::s_battery_percent = 0;
 
-// chart power
-lv_obj_t *WatchTft::chart_power = NULL;
-lv_obj_t *WatchTft::label_chart_usb;
-lv_obj_t *WatchTft::label_chart_bat;
-lv_chart_series_t *WatchTft::power_chart_ser_bat = NULL;
-lv_chart_series_t *WatchTft::power_chart_ser_usb = NULL;
-
 // physical button menu
 lv_obj_t *WatchTft::button_menu = NULL;
 lv_obj_t *WatchTft::lcd_turn_off_screen = NULL;
 lv_obj_t *WatchTft::lcd_reset_screen = NULL;
-lv_obj_t *WatchTft::lcd_power_screen = NULL;
 lv_obj_t *WatchTft::lcd_sleep_screen = NULL;
 
 lv_obj_t *WatchTft::main_screen;
@@ -492,127 +477,6 @@ void WatchTft::sleep_screen()
     vTaskDelay(500);
 
     watchPower.enter_light_sleep();
-}
-
-void WatchTft::power_screen()
-{
-    lv_obj_t *power_bg = NULL;
-
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
-    {
-
-        if (lcd_power_screen != NULL)
-        {
-            lv_obj_clean(lcd_power_screen);
-            lcd_power_screen = NULL;
-        }
-        lcd_power_screen = lv_obj_create(NULL);
-        lv_scr_load(lcd_power_screen);
-        current_screen = lcd_power_screen;
-        lv_obj_clear_flag(lcd_power_screen, LV_OBJ_FLAG_SCROLLABLE);
-
-        static lv_style_t power_bg_style;
-        lv_style_init(&power_bg_style);
-        lv_style_set_bg_color(&power_bg_style, lv_color_black());
-        lv_style_set_radius(&power_bg_style, 0);
-        lv_style_set_border_width(&power_bg_style, 0);
-        lv_style_set_pad_all(&power_bg_style, 0);
-
-        power_bg = lv_obj_create(lcd_power_screen);
-        lv_obj_set_size(power_bg, 240, 210);
-        lv_obj_align(power_bg, LV_ALIGN_TOP_LEFT, 0, 30);
-        lv_obj_clear_flag(power_bg, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_style(power_bg, &power_bg_style, LV_PART_MAIN);
-
-        DELAY_BETWEEN_LV(10)
-
-        lv_obj_t *btn_home = lv_btn_create(power_bg);
-        lv_obj_align(btn_home, LV_ALIGN_BOTTOM_LEFT, 5, -5);
-        lv_obj_set_size(btn_home, 48, 35);
-        lv_obj_set_style_bg_opa(btn_home, 0, LV_PART_MAIN);
-        static LCD_BTN_EVENT cmd_home = LCD_BTN_EVENT::RETURN_HOME;
-        lv_obj_add_event_cb(btn_home, event_handler_main, LV_EVENT_CLICKED, &cmd_home);
-
-        lv_obj_t *img_arrow_left = lv_img_create(btn_home);
-        lv_img_set_src(img_arrow_left, &arrow);
-        lv_obj_align(img_arrow_left, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_size(img_arrow_left, 24, 24);
-        lv_img_set_angle(img_arrow_left, 1800);
-        lv_obj_add_style(img_arrow_left, &img_recolor_white_style, LV_PART_MAIN);
-
-        DELAY_BETWEEN_LV(10)
-
-        lv_obj_t *label_chart_unit = lv_label_create(power_bg);
-        lv_obj_align(label_chart_unit, LV_ALIGN_TOP_LEFT, 5, 5);
-        lv_obj_set_style_text_align(label_chart_unit, LV_TEXT_ALIGN_LEFT, 0);
-        lv_obj_set_style_text_color(label_chart_unit, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
-        lv_label_set_text(label_chart_unit, "(mA)");
-
-        label_chart_usb = lv_label_create(power_bg);
-        lv_obj_align(label_chart_usb, LV_ALIGN_BOTTOM_RIGHT, -10, -30);
-        lv_obj_set_style_text_align(label_chart_usb, LV_TEXT_ALIGN_RIGHT, 0);
-        lv_obj_set_style_text_color(label_chart_usb, lv_palette_main(LV_PALETTE_GREEN), LV_PART_MAIN);
-        lv_label_set_text(label_chart_usb, "USB   417ma");
-
-        label_chart_bat = lv_label_create(power_bg);
-        lv_obj_align(label_chart_bat, LV_ALIGN_BOTTOM_RIGHT, -10, -15);
-        lv_obj_set_style_text_align(label_chart_bat, LV_TEXT_ALIGN_RIGHT, 0);
-        lv_obj_set_style_text_color(label_chart_bat, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
-        lv_label_set_text(label_chart_bat, "BATT 536ma");
-
-        DELAY_BETWEEN_LV(10)
-
-        chart_power = lv_chart_create(power_bg);
-        lv_obj_set_size(chart_power, 185, 130);
-        lv_obj_align(chart_power, LV_ALIGN_TOP_LEFT, 45, 25);
-        lv_chart_set_type(chart_power, LV_CHART_TYPE_LINE);
-        lv_chart_set_range(chart_power, LV_CHART_AXIS_PRIMARY_Y, 0, 500);
-        lv_chart_set_range(chart_power, LV_CHART_AXIS_SECONDARY_Y, 0, 500);
-        lv_chart_set_axis_tick(chart_power, LV_CHART_AXIS_PRIMARY_Y, 10, 5, 6, 2, true, 50);
-        power_chart_ser_bat = lv_chart_add_series(chart_power, lv_palette_main(LV_PALETTE_RED), LV_CHART_AXIS_PRIMARY_Y);
-        power_chart_ser_usb = lv_chart_add_series(chart_power, lv_palette_main(LV_PALETTE_GREEN), LV_CHART_AXIS_SECONDARY_Y);
-        for (uint8_t i = 0; i < 10; i++)
-        {
-            power_chart_ser_bat->y_points[i] = 0;
-            power_chart_ser_usb->y_points[i] = 0;
-        }
-
-        lv_chart_refresh(chart_power);
-
-        display_top_bar(lcd_power_screen, "Power");
-
-        xSemaphoreGive(xGuiSemaphore);
-    }
-}
-
-void WatchTft::add_chart_power_value(lv_coord_t batt, lv_coord_t vbus)
-{
-    if (power_chart_ser_bat == NULL || power_chart_ser_usb == NULL)
-    {
-        return;
-    }
-    for (uint8_t i = 0; i < 9; i++)
-    {
-        power_chart_ser_bat->y_points[i] = power_chart_ser_bat->y_points[i + 1];
-        power_chart_ser_usb->y_points[i] = power_chart_ser_usb->y_points[i + 1];
-    }
-    power_chart_ser_bat->y_points[9] = batt;
-    power_chart_ser_usb->y_points[9] = vbus;
-
-    char usb_str[15] = {};
-    sprintf(usb_str, "USB %dma", vbus);
-
-    char batt_str[15] = {};
-    sprintf(batt_str, "BATT %dma", batt);
-
-    lv_label_set_text(label_chart_usb, usb_str);
-    lv_label_set_text(label_chart_bat, batt_str);
-
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 50))
-    {
-        lv_chart_refresh(chart_power);
-        xSemaphoreGive(xGuiSemaphore);
-    }
 }
 
 void WatchTft::main_screen_from_sleep()
