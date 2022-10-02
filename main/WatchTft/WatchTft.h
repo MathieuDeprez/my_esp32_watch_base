@@ -38,6 +38,7 @@ private:
         RESET_ESP,
         RETURN_HOME,
         POWER_SCREEN,
+        RUN_SCREEN,
     };
 
     enum class LCD_BTN_EVENT : uint32_t
@@ -51,19 +52,24 @@ private:
         TOP_BAR_TOGGLE,
         RETURN_HOME,
         POWER_SCREEN,
+        RUN_SCREEN,
     };
 
     static lv_obj_t *current_screen;
     static lv_obj_t *main_screen;
 
+    static TaskHandle_t current_task_hanlde;
+
     // images
     static const lv_img_dsc_t lune;
     static const lv_img_dsc_t ampoule;
     static const lv_img_dsc_t main_bg;
+    static const lv_img_dsc_t gradient_count;
     static const lv_img_dsc_t bolt;
     static const lv_img_dsc_t rotate;
     static const lv_img_dsc_t arrow;
     static const lv_img_dsc_t circle;
+    static const lv_img_dsc_t run;
 
     // top menu
     static lv_obj_t *label_battery;
@@ -74,13 +80,18 @@ private:
     static lv_obj_t *main_slider_top_bl;
     static uint8_t s_battery_percent;
 
-    // chart power
+    // power screen
     static lv_obj_t *lcd_power_screen;
     static lv_obj_t *chart_power;
     static lv_obj_t *label_chart_usb;
     static lv_obj_t *label_chart_bat;
     static lv_chart_series_t *power_chart_ser_bat;
     static lv_chart_series_t *power_chart_ser_usb;
+
+    // run screen
+    static lv_obj_t *lcd_run_screen;
+    static lv_obj_t *label_step_count;
+    static lv_obj_t *arc_counter;
 
     // physical button menu
     static lv_obj_t *button_menu;
@@ -111,6 +122,10 @@ private:
     static void return_home_screen();
     static void display_top_bar(lv_obj_t *parent, const char *title);
     static void show_button_menu();
+
+    static void run_screen();
+    static void count_step_task(void *pvParameter);
+    static void set_step_counter_value(uint32_t steps);
 };
 
 #endif

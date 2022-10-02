@@ -1,11 +1,11 @@
 #include "WatchTft.h"
 
-WatchTft watchTft;
 QueueHandle_t WatchTft::xQueueLcdCmd;
 /* Creates a semaphore to handle concurrent call to lvgl stuff
  * If you wish to call *any* lvgl function from other threads/tasks
  * you should lock on the very same semaphore! */
 SemaphoreHandle_t WatchTft::xGuiSemaphore;
+TaskHandle_t WatchTft::current_task_hanlde = NULL;
 
 lv_style_t WatchTft::img_recolor_white_style;
 
@@ -78,6 +78,10 @@ void WatchTft::queue_cmd_task(void *pvParameter)
             printf("POWER_SCREEN\n");
             power_screen();
             break;
+        case LCD_CMD::RUN_SCREEN:
+            printf("RUN_SCREEN\n");
+            run_screen();
+            break;
 
         default:
             printf("unknow LCD CMD");
@@ -116,6 +120,7 @@ void WatchTft::gui_task(void *pvParameter)
     disp_drv.ver_res = LV_VER_RES_MAX;
     disp_drv.flush_cb = disp_driver_flush;
     disp_drv.draw_buf = &disp_buf;
+    disp_drv.sw_rotate = 0;
     lv_disp_drv_register(&disp_drv);
 
     /* Register an input device when enabled on the menuconfig */
@@ -213,14 +218,21 @@ void WatchTft::init_home_screen(void)
         lv_obj_set_size(btn_0_1, 60, 60);
         lv_obj_set_style_bg_opa(btn_0_1, 150, LV_PART_MAIN);
         lv_obj_set_style_bg_color(btn_0_1, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
-        static LCD_BTN_EVENT cmd_reset = LCD_BTN_EVENT::RESET_ESP;
-        lv_obj_add_event_cb(btn_0_1, event_handler_main, LV_EVENT_CLICKED, &cmd_reset);
+        static LCD_BTN_EVENT cmd_run = LCD_BTN_EVENT::RUN_SCREEN;
+        lv_obj_add_event_cb(btn_0_1, event_handler_main, LV_EVENT_CLICKED, &cmd_run);
+
+        lv_obj_t *img_run = lv_img_create(btn_0_1);
+        lv_img_set_src(img_run, &run);
+        lv_obj_align(img_run, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_size(img_run, 24, 24);
+        lv_obj_add_style(img_run, &img_recolor_white_style, LV_PART_MAIN);
 
         lv_obj_t *btn_0_2 = lv_btn_create(main_screen);
         lv_obj_align(btn_0_2, LV_ALIGN_TOP_LEFT, 165, 45);
         lv_obj_set_size(btn_0_2, 60, 60);
         lv_obj_set_style_bg_opa(btn_0_2, 150, LV_PART_MAIN);
         lv_obj_set_style_bg_color(btn_0_2, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
+        static LCD_BTN_EVENT cmd_reset = LCD_BTN_EVENT::RESET_ESP;
         lv_obj_add_event_cb(btn_0_2, event_handler_main, LV_EVENT_CLICKED, &cmd_reset);
 
         lv_obj_t *btn_1_0 = lv_btn_create(main_screen);
@@ -263,8 +275,6 @@ void WatchTft::init_home_screen(void)
         lv_obj_set_size(img_circle, 24, 24);
         lv_obj_add_style(img_circle, &img_recolor_white_style, LV_PART_MAIN);
 
-        DELAY_BETWEEN_LV(10)
-
         btn_next_page = lv_btn_create(main_screen);
 
         lv_obj_align(btn_next_page, LV_ALIGN_BOTTOM_MID, 58, -10);
@@ -273,15 +283,11 @@ void WatchTft::init_home_screen(void)
         static LCD_BTN_EVENT cmd_right = LCD_BTN_EVENT::NEXT_PAGE;
         lv_obj_add_event_cb(btn_next_page, event_handler_main, LV_EVENT_CLICKED, &cmd_right);
 
-        DELAY_BETWEEN_LV(10)
-
         lv_obj_t *img_arrow_right = lv_img_create(btn_next_page);
         lv_img_set_src(img_arrow_right, &arrow);
         lv_obj_align(img_arrow_right, LV_ALIGN_CENTER, 0, 0);
         lv_obj_set_size(img_arrow_right, 24, 24);
         lv_obj_add_style(img_arrow_right, &img_recolor_white_style, LV_PART_MAIN);
-
-        DELAY_BETWEEN_LV(10)
 
         btn_previous_page = lv_btn_create(main_screen);
         lv_obj_align(btn_previous_page, LV_ALIGN_BOTTOM_MID, -58, -10);
@@ -289,8 +295,6 @@ void WatchTft::init_home_screen(void)
         lv_obj_set_style_bg_opa(btn_previous_page, 0, LV_PART_MAIN);
         static LCD_BTN_EVENT cmd_left = LCD_BTN_EVENT::PREVIOUS_PAGE;
         lv_obj_add_event_cb(btn_previous_page, event_handler_main, LV_EVENT_CLICKED, &cmd_left);
-
-        DELAY_BETWEEN_LV(10)
 
         lv_obj_t *img_arrow_left = lv_img_create(btn_previous_page);
         lv_img_set_src(img_arrow_left, &arrow);
@@ -300,8 +304,6 @@ void WatchTft::init_home_screen(void)
         lv_obj_add_style(img_arrow_left, &img_recolor_white_style, LV_PART_MAIN);
 
         display_top_bar(main_screen, "Home");
-
-        DELAY_BETWEEN_LV(10)
 
         show_button_menu();
 
@@ -476,7 +478,7 @@ void WatchTft::sleep_screen()
 
     vTaskDelay(500);
 
-    watchPower.enter_light_sleep();
+    WatchPower::enter_light_sleep();
 }
 
 void WatchTft::main_screen_from_sleep()
@@ -510,6 +512,11 @@ void WatchTft::return_home_screen()
         lv_scr_load(main_screen);
         lv_obj_clean(current_screen);
         current_screen = main_screen;
+        if (current_task_hanlde != NULL)
+        {
+            vTaskDelete(current_task_hanlde);
+            current_task_hanlde = NULL;
+        }
 
         if (lcd_power_screen != NULL)
         {
@@ -596,6 +603,12 @@ void WatchTft::event_handler_main(lv_event_t *e)
     case LCD_BTN_EVENT::POWER_SCREEN:
     {
         LCD_CMD cmd = LCD_CMD::POWER_SCREEN;
+        xQueueSend(xQueueLcdCmd, &cmd, 0);
+        break;
+    }
+    case LCD_BTN_EVENT::RUN_SCREEN:
+    {
+        LCD_CMD cmd = LCD_CMD::RUN_SCREEN;
         xQueueSend(xQueueLcdCmd, &cmd, 0);
         break;
     }

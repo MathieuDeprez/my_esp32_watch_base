@@ -38,8 +38,6 @@ void WatchTft::power_screen()
         lv_obj_clear_flag(power_bg, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_style(power_bg, &power_bg_style, LV_PART_MAIN);
 
-        DELAY_BETWEEN_LV(10)
-
         lv_obj_t *btn_home = lv_btn_create(power_bg);
         lv_obj_align(btn_home, LV_ALIGN_BOTTOM_LEFT, 5, -5);
         lv_obj_set_size(btn_home, 48, 35);
@@ -53,8 +51,6 @@ void WatchTft::power_screen()
         lv_obj_set_size(img_arrow_left, 24, 24);
         lv_img_set_angle(img_arrow_left, 1800);
         lv_obj_add_style(img_arrow_left, &img_recolor_white_style, LV_PART_MAIN);
-
-        DELAY_BETWEEN_LV(10)
 
         lv_obj_t *label_chart_unit = lv_label_create(power_bg);
         lv_obj_align(label_chart_unit, LV_ALIGN_TOP_LEFT, 5, 5);
@@ -73,8 +69,6 @@ void WatchTft::power_screen()
         lv_obj_set_style_text_align(label_chart_bat, LV_TEXT_ALIGN_RIGHT, 0);
         lv_obj_set_style_text_color(label_chart_bat, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
         lv_label_set_text(label_chart_bat, "BATT 536ma");
-
-        DELAY_BETWEEN_LV(10)
 
         chart_power = lv_chart_create(power_bg);
         lv_obj_set_size(chart_power, 185, 130);

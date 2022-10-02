@@ -7,3 +7,6 @@
 [submodule "components/lvgl_esp32_drivers"]
 	path = components/lvgl_esp32_drivers
 	url = https://github.com/MathieuDeprez/lvgl_esp32_drivers.git
+[submodule "components/BMA423-Sensor-API"]
+	path = components/BMA423-Sensor-API
+	url = https://github.com/MathieuDeprez/BMA423-Sensor-API.git

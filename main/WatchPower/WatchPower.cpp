@@ -1,6 +1,5 @@
 #include "WatchPower.h"
 
-WatchPower watchPower;
 volatile bool WatchPower::_irq = false;
 
 void WatchPower::init()
@@ -55,7 +54,7 @@ void WatchPower::enter_light_sleep()
 
     esp_sleep_enable_gpio_wakeup();
 
-    watchTft.turn_screen_off();
+    WatchTft::turn_screen_off();
 
     int64_t t_before_us = esp_timer_get_time();
     printf("\nSleeping...\n\n");
@@ -128,7 +127,12 @@ void WatchPower::power_task(void *pvParameter)
         if ((esp_timer_get_time()) - timer_battery_voltage > 10 * 1000 * 1000)
         {
             timer_battery_voltage = esp_timer_get_time();
-            watchTft.set_battery_text(axpxx_getBattPercentage());
+            BaseType_t err = xSemaphoreTake(i2c_0_semaphore, 500);
+            if (err == pdTRUE)
+            {
+                WatchTft::set_battery_text(axpxx_getBattPercentage());
+                xSemaphoreGive(i2c_0_semaphore);
+            }
         }
     }
 }

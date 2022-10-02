@@ -23,11 +23,14 @@
 // my classes
 #include "WatchTft.h"
 #include "WatchPower.h"
+#include "WatchBma.h"
 
 // my cpp
 #include "C_AXP202X_Library/axp20x.h"
 
-extern WatchTft watchTft;
-extern WatchPower watchPower;
+#include "BMA423-Sensor-API/bma423.h"
+#include "BMA423-Sensor-API/examples/generic/common/bma4_common.h"
+
+extern SemaphoreHandle_t i2c_0_semaphore;
 
 #endif
