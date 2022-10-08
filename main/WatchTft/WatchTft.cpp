@@ -446,6 +446,7 @@ void WatchTft::turn_off_screen()
 
     vTaskDelay(500);
 
+    timer_last_touch = esp_timer_get_time() / 1000;
     turn_screen_off();
 }
 
@@ -639,16 +640,23 @@ void WatchTft::toggle_button_menu_view()
     static bool button_menu_visible = false;
     printf("turning %s button_menu_visible\n", button_menu_visible ? "off" : "on");
 
-    if (button_menu_visible)
+    if (button_menu_visible || !screen_en)
     {
-        if (lcd_turn_off_screen != NULL)
-        {
-            lv_obj_clean(lcd_turn_off_screen);
-            lcd_turn_off_screen = NULL;
-        }
-        lv_scr_load(current_screen);
         if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
         {
+            if (lcd_turn_off_screen != NULL)
+            {
+                printf("cleaning lcd_turn_off_screen\n");
+                lv_obj_clean(lcd_turn_off_screen);
+                lcd_turn_off_screen = NULL;
+            }
+            else
+            {
+                printf("no lcd_turn_off_screen\n");
+            }
+            printf("loading current_screen\n");
+            lv_scr_load(current_screen);
+
             if (button_menu != NULL)
             {
                 lv_obj_add_flag(button_menu, LV_OBJ_FLAG_HIDDEN);
@@ -659,6 +667,7 @@ void WatchTft::toggle_button_menu_view()
         {
             printf("Failed to take GUI Semaphore AX02\n");
         }
+        button_menu_visible = false;
     }
     else
     {
@@ -673,8 +682,8 @@ void WatchTft::toggle_button_menu_view()
         {
             printf("Failed to take GUI Semaphore AX03\n");
         }
+        button_menu_visible = true;
     }
-    button_menu_visible = !button_menu_visible;
 }
 
 void WatchTft::slider_event_cb(lv_event_t *e)
@@ -703,6 +712,7 @@ void WatchTft::turn_screen_on()
         return;
 
     screen_en = 1;
+    timer_last_touch = esp_timer_get_time() / 1000;
 
     axpxx_setPowerOutPut(AXP202_LDO3, 1);
     axpxx_setPowerOutPut(AXP202_LDO2, 1);

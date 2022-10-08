@@ -110,35 +110,14 @@ void WatchTft::count_step_task(void *pvParameter)
     printf("Move/perform the walk/step action with the sensor\n");
     while (1)
     {
-        /*vTaskDelay(2000);
-
-        // Read the interrupt register to check whether step counter interrupt is received.
-        BaseType_t err = xSemaphoreTake(i2c_0_semaphore, 500);
-        if (err != pdTRUE)
-        {
-            printf("can't take i2c_sem from bma\n");
-            continue;
-        }
-        rslt = bma423_read_int_status(&int_status, &bma);
-        xSemaphoreGive(i2c_0_semaphore);
-
-        // Check if step counter interrupt is triggered
+        uint16_t int_status = WatchBma::s_int_status;
+        WatchBma::s_int_status = 0;
         if (int_status & BMA423_STEP_CNTR_INT)
         {
-            printf("\nStep counter interrupt received\n");
+            WatchBma::steps_count_save = WatchBma::get_steps();
+            set_step_counter_value(WatchBma::steps_count_save);
+        }
 
-            // On interrupt, Get step counter output
-            rslt = bma423_step_counter_output(&step_out, &bma);
-            printf("\nThe step counter output is %u\r\n", step_out);
-            bma4_error_codes_print_result("bma423_step_counter_output status", rslt);
-
-            // break;
-        }*/
-
-        uint32_t steps = WatchBma::get_steps();
-        WatchBma::steps_count_save = steps;
-        set_step_counter_value(steps);
-
-        vTaskDelay(2000);
+        vTaskDelay(1000);
     }
 }

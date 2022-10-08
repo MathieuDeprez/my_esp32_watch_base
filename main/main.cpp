@@ -2,6 +2,7 @@
 #define TAG "main"
 
 SemaphoreHandle_t i2c_0_semaphore;
+uint32_t timer_last_touch = esp_timer_get_time() / 1000;
 
 extern "C"
 {
@@ -24,7 +25,11 @@ void app_main()
 
     while (1)
     {
-
+        printf("touch timer: %u\n", (uint32_t)(esp_timer_get_time() / 1000) - timer_last_touch);
+        if ((esp_timer_get_time() / 1000) - timer_last_touch > 5000 && WatchTft::screen_en)
+        {
+            WatchTft::turn_off_screen();
+        }
         BaseType_t err = xSemaphoreTake(i2c_0_semaphore, 500);
         if (err != pdTRUE)
         {
@@ -41,6 +46,6 @@ void app_main()
                current_Vbus);
 
         WatchTft::add_chart_power_value((lv_coord_t)current_Batt, (lv_coord_t)current_Vbus);
-        vTaskDelay(3000);
+        vTaskDelay(1000);
     }
 }

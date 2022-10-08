@@ -1,6 +1,8 @@
 #include "WatchBma.h"
 struct bma4_dev WatchBma::bma;
 uint32_t WatchBma::steps_count_save = 0;
+volatile bool WatchBma::_irq = 0;
+uint16_t WatchBma::s_int_status = 0;
 
 void WatchBma::init()
 {
@@ -57,54 +59,6 @@ void WatchBma::init()
         vTaskDelay(portMAX_DELAY);
     }
 
-    if (bma4_set_accel_enable(BMA4_ENABLE, &bma))
-    {
-        return;
-    }
-    bma4_accel_config cfg;
-    cfg.odr = BMA4_OUTPUT_DATA_RATE_100HZ;
-    cfg.range = BMA4_ACCEL_RANGE_2G;
-    cfg.bandwidth = BMA4_ACCEL_NORMAL_AVG4;
-    cfg.perf_mode = BMA4_CONTINUOUS_MODE;
-
-    if (bma4_set_accel_config(&cfg, &bma))
-    {
-        printf("[bma4] set accel config fail\n");
-        return;
-    }
-    rslt |= bma423_reset_step_counter(&bma);
-    rslt |= bma423_step_detector_enable(BMA4_ENABLE, &bma);
-    rslt |= bma423_feature_enable(BMA423_STEP_CNTR, BMA4_ENABLE, &bma);
-    rslt |= bma423_feature_enable(0x20, BMA4_ENABLE, &bma);
-    rslt |= bma423_feature_enable(0x10, BMA4_ENABLE, &bma);
-    rslt |= bma423_step_counter_set_watermark(100, &bma);
-
-    // rslt |= bma423_map_interrupt(BMA4_INTR1_MAP, BMA423_STEP_CNTR_INT | BMA423_WAKEUP_INT, BMA4_ENABLE, &_dev);
-    rslt |= bma423_map_interrupt(BMA4_INTR1_MAP, BMA423_STEP_CNTR_INT, BMA4_ENABLE, &bma);
-    rslt |= bma423_map_interrupt(BMA4_INTR1_MAP, 0x08, BMA4_ENABLE, &bma);
-
-    uint8_t feature_config[BMA423_ANYMOTION_EN_LEN + 2] = {0};
-    /* Anymotion axis enable bit pos. is 3 byte ahead of the
-      anymotion base address(0x00) */
-    uint8_t index = 3;
-
-    if (bma.chip_id == BMA423_CHIP_ID)
-    {
-        rslt = bma4_read_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config,
-                              BMA423_ANYMOTION_EN_LEN + 2, &bma);
-        if (rslt == BMA4_OK)
-        {
-            feature_config[index] = BMA4_SET_BITSLICE(feature_config[index],
-                                                      BMA423_ANY_NO_MOTION_AXIS_EN, 0);
-            rslt |= bma4_write_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config,
-                                    BMA423_ANYMOTION_EN_LEN + 2, &bma);
-        }
-    }
-    else
-    {
-        rslt = BMA4_E_INVALID_SENSOR;
-    }
-
     /* Enable the accelerometer */
     rslt = bma4_set_accel_enable(1, &bma);
     bma4_error_codes_print_result("bma4_set_accel_enable status", rslt);
@@ -138,15 +92,25 @@ void WatchBma::init()
     rslt = bma4_set_accel_config(&accel_conf, &bma);
     bma4_error_codes_print_result("bma4_set_accel_config status", rslt);
 
+    rslt |= bma423_reset_step_counter(&bma);
+
+    rslt = bma423_step_detector_enable(1, &bma);
+    bma4_error_codes_print_result("bma423_step_detector_enable status", rslt);
+
     /* Enable step counter */
     rslt = bma423_feature_enable(BMA423_STEP_CNTR, 1, &bma);
-    bma4_error_codes_print_result("bma423_feature_enable status", rslt);
+    bma4_error_codes_print_result("bma423_feature_enable step status", rslt);
 
-    /* Map the interrupt pin with that of step counter interrupts
-     * Interrupt will  be generated when step activity is generated.
-     */
-    rslt = bma423_map_interrupt(BMA4_INTR1_MAP, BMA423_STEP_CNTR_INT, 1, &bma);
-    bma4_error_codes_print_result("bma423_map_interrupt status", rslt);
+    /* Enable activity counter */
+    rslt = bma423_feature_enable(BMA423_STEP_ACT, 1, &bma);
+    bma4_error_codes_print_result("bma423_feature_enable activity status", rslt);
+
+    /* Enable wrist counter */
+    rslt = bma423_feature_enable(BMA423_WRIST_WEAR, 1, &bma);
+    bma4_error_codes_print_result("bma423_feature_enable wrist status", rslt);
+
+    rslt |= bma423_feature_enable(0x20, BMA4_ENABLE, &bma);
+    rslt |= bma423_feature_enable(0x10, BMA4_ENABLE, &bma);
 
     /* Set water-mark level 1 to get interrupt after 20 steps.
      * Range of step counter interrupt is 0 to 20460(resolution of 20 steps).
@@ -154,10 +118,74 @@ void WatchBma::init()
     rslt = bma423_step_counter_set_watermark(1, &bma);
     bma4_error_codes_print_result("bma423_step_counter status", rslt);
 
-    rslt = bma423_step_detector_enable(1, &bma);
-    bma4_error_codes_print_result("bma423_step_detector_enable status", rslt);
+    /* Map the interrupt pin with that of step counter interrupts
+     * Interrupt will  be generated when step activity is generated.
+     */
+    rslt = bma423_map_interrupt(BMA4_INTR1_MAP, BMA423_STEP_CNTR_INT | BMA423_ACTIVITY_INT | BMA423_WRIST_WEAR_INT | BMA423_DOUBLE_TAP_INT, 1, &bma);
+    bma4_error_codes_print_result("bma423_map_interrupt status", rslt);
+
+    bma423_double_tap_set_sensitivity(0, &bma);
+
+    struct bma423_axes_remap remap_data;
+    remap_data.x_axis = 1;
+    remap_data.x_axis_sign = 0;
+    remap_data.y_axis = 0;
+    remap_data.y_axis_sign = 0;
+    remap_data.z_axis = 2;
+    remap_data.z_axis_sign = 1;
+    bma423_set_remap_axes(&remap_data, &bma);
+
+    register_int_isr();
 
     xSemaphoreGive(i2c_0_semaphore);
+
+    TaskHandle_t bma_int_task_hanlde = NULL;
+    xTaskCreatePinnedToCore(check_int_task, "int_bma", 4096 * 2, NULL, 0, &bma_int_task_hanlde, 1);
+}
+
+void WatchBma::check_int_task(void *pvParameter)
+{
+    while (1)
+    {
+        if (check_irq())
+        {
+            printf("\n********* IRQ BMA *******\n");
+            s_int_status |= check_int_status();
+            if ((s_int_status & BMA423_WRIST_WEAR_INT) || (s_int_status & BMA423_DOUBLE_TAP_INT))
+            {
+                if (!WatchTft::screen_en)
+                {
+                    WatchTft::toggle_button_menu_view();
+                    WatchTft::turn_screen_on();
+                }
+            }
+        }
+        vTaskDelay(1000);
+    }
+}
+
+void WatchBma::register_int_isr()
+{
+    gpio_config_t io_conf = {};
+    io_conf.intr_type = GPIO_INTR_POSEDGE;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pin_bit_mask = (1ULL << BMA423_INT);
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    gpio_config(&io_conf);
+    gpio_isr_handler_add(BMA423_INT, gpio_isr_handler, NULL);
+}
+
+void IRAM_ATTR WatchBma::gpio_isr_handler(void *arg)
+{
+    _irq = true;
+}
+
+bool WatchBma::check_irq()
+{
+    bool irq = _irq;
+    _irq = false;
+    return irq;
 }
 
 uint32_t WatchBma::get_steps()
@@ -173,4 +201,37 @@ uint32_t WatchBma::get_steps()
     bma4_error_codes_print_result("bma423_step_counter_output status", rslt);
     xSemaphoreGive(i2c_0_semaphore);
     return step_out;
+}
+
+uint16_t WatchBma::check_int_status()
+{
+    BaseType_t err = xSemaphoreTake(i2c_0_semaphore, 500);
+    if (err != pdTRUE)
+    {
+        return 0;
+    }
+    uint16_t int_status = 0;
+    int8_t rslt = bma423_read_int_status(&int_status, &bma);
+    if (int_status != 0)
+    {
+        printf("int_status : %u\n", int_status);
+        if (int_status & BMA423_WRIST_WEAR_INT)
+        {
+            printf("WRIST INT!\n");
+        }
+        else if (int_status & BMA423_DOUBLE_TAP_INT)
+        {
+            printf("DOUBLE TAP INT!\n");
+        }
+        else if (int_status & BMA423_ACTIVITY_INT)
+        {
+            printf("ACTIVITY INT!\n");
+            uint8_t activity_output = 0;
+            bma423_activity_output(&activity_output, &bma);
+            printf("activity_output %d !\n", activity_output);
+        }
+    }
+    bma4_error_codes_print_result("bma423_read_int_status status", rslt);
+    xSemaphoreGive(i2c_0_semaphore);
+    return int_status;
 }

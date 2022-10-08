@@ -20,10 +20,13 @@ class WatchTft
 {
 
 public:
+    static bool screen_en;
+
     static void init();
 
     static void turn_screen_on();
     static void turn_screen_off();
+    static void turn_off_screen();
     static void set_battery_text(uint8_t percent);
     static void toggle_button_menu_view();
 
@@ -99,7 +102,6 @@ private:
     static lv_obj_t *lcd_reset_screen;
     static lv_obj_t *lcd_sleep_screen;
 
-    static bool screen_en;
     static uint8_t bl_value;
     static disp_backlight_h bckl_handle;
     static lv_style_t img_recolor_white_style;
@@ -115,7 +117,6 @@ private:
     static void set_bl(uint8_t value);
     static void toggle_top_bar_view();
     static void event_handler_main(lv_event_t *e);
-    static void turn_off_screen();
     static void sleep_screen();
     static void reset_screen();
     static void power_screen();

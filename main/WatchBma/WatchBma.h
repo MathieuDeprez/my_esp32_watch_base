@@ -6,19 +6,27 @@
 #define BMA423_ANY_NO_MOTION_AXIS_EN_MSK 0xE0
 #define BMA423_ANY_NO_MOTION_AXIS_EN_POS UINT8_C(5)
 #define BMA423_ANYMOTION_EN_LEN 2
-
+#define BMA423_INT GPIO_NUM_39
 #define STEP_COUNTER_GOAL 1000
 
 class WatchBma
 {
 public:
     static struct bma4_dev bma;
+    static uint32_t steps_count_save;
+    static uint16_t s_int_status;
+
     static void init();
     static uint32_t get_steps();
-    static uint32_t steps_count_save;
+    static uint16_t check_int_status();
+    static bool check_irq();
 
 private:
-    // private
+    static volatile bool _irq;
+
+    static void register_int_isr();
+    static void IRAM_ATTR gpio_isr_handler(void *arg);
+    static void check_int_task(void *pvParameter);
 };
 
 #endif
