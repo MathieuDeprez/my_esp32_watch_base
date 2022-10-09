@@ -82,6 +82,10 @@ void WatchTft::queue_cmd_task(void *pvParameter)
             printf("RUN_SCREEN\n");
             run_screen();
             break;
+        case LCD_CMD::SETTINGS_SCREEN:
+            printf("SETTINGS_SCREEN\n");
+            settings_screen();
+            break;
 
         default:
             printf("unknow LCD CMD");
@@ -207,11 +211,13 @@ void WatchTft::init_home_screen(void)
         lv_style_set_img_recolor_opa(&img_recolor_white_style, 255);
         lv_style_set_img_recolor(&img_recolor_white_style, lv_color_white());
 
-        lv_obj_t *img_bolt = lv_img_create(btn_0_0);
-        lv_img_set_src(img_bolt, &bolt);
-        lv_obj_align(img_bolt, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_size(img_bolt, 24, 24);
-        lv_obj_add_style(img_bolt, &img_recolor_white_style, LV_PART_MAIN);
+        lv_obj_t *power_icon = lv_label_create(btn_0_0);
+        lv_obj_align(power_icon, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_size(power_icon, 24, 24);
+        lv_label_set_text(power_icon, LV_SYMBOL_CHARGE);
+        lv_obj_set_style_text_font(power_icon, &lv_font_montserrat_24, 0);
+        lv_obj_set_style_text_align(power_icon, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_add_style(power_icon, &img_recolor_white_style, LV_PART_MAIN);
 
         lv_obj_t *btn_0_1 = lv_btn_create(main_screen);
         lv_obj_align(btn_0_1, LV_ALIGN_TOP_LEFT, 90, 45);
@@ -247,7 +253,16 @@ void WatchTft::init_home_screen(void)
         lv_obj_set_size(btn_1_1, 60, 60);
         lv_obj_set_style_bg_opa(btn_1_1, 150, LV_PART_MAIN);
         lv_obj_set_style_bg_color(btn_1_1, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
-        lv_obj_add_event_cb(btn_1_1, event_handler_main, LV_EVENT_CLICKED, &cmd_reset);
+        static LCD_BTN_EVENT cmd_settings = LCD_BTN_EVENT::SETTINGS_SCREEN;
+        lv_obj_add_event_cb(btn_1_1, event_handler_main, LV_EVENT_CLICKED, &cmd_settings);
+
+        lv_obj_t *settings_icon = lv_label_create(btn_1_1);
+        lv_obj_align(settings_icon, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_size(settings_icon, 24, 24);
+        lv_label_set_text(settings_icon, LV_SYMBOL_SETTINGS);
+        lv_obj_set_style_text_font(settings_icon, &lv_font_montserrat_24, 0);
+        lv_obj_set_style_text_align(settings_icon, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_add_style(settings_icon, &img_recolor_white_style, LV_PART_MAIN);
 
         lv_obj_t *btn_1_2 = lv_btn_create(main_screen);
         lv_obj_align(btn_1_2, LV_ALIGN_TOP_LEFT, 165, 120);
@@ -610,6 +625,12 @@ void WatchTft::event_handler_main(lv_event_t *e)
     case LCD_BTN_EVENT::RUN_SCREEN:
     {
         LCD_CMD cmd = LCD_CMD::RUN_SCREEN;
+        xQueueSend(xQueueLcdCmd, &cmd, 0);
+        break;
+    }
+    case LCD_BTN_EVENT::SETTINGS_SCREEN:
+    {
+        LCD_CMD cmd = LCD_CMD::SETTINGS_SCREEN;
         xQueueSend(xQueueLcdCmd, &cmd, 0);
         break;
     }

@@ -98,7 +98,6 @@ void WatchTft::set_step_counter_value(uint32_t steps)
         return;
     }
     uint16_t angle = (steps % STEP_COUNTER_GOAL) * 360 / STEP_COUNTER_GOAL;
-    printf("angle %d\n", angle);
     lv_arc_set_angles(arc_counter, 0, angle);
     std::string step_str = std::to_string(steps);
     lv_label_set_text(label_step_count, step_str.c_str());

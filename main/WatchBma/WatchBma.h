@@ -15,6 +15,8 @@ public:
     static struct bma4_dev bma;
     static uint32_t steps_count_save;
     static uint16_t s_int_status;
+    static bool wakeup_on_double_tap;
+    static bool wakeup_on_tilt;
 
     static void init();
     static uint32_t get_steps();

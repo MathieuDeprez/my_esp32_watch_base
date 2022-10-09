@@ -32,5 +32,6 @@
 #include "BMA423-Sensor-API/examples/generic/common/bma4_common.h"
 
 extern SemaphoreHandle_t i2c_0_semaphore;
+extern uint32_t timer_turn_off_screen;
 
 #endif

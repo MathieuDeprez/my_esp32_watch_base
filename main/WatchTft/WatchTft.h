@@ -42,6 +42,7 @@ private:
         RETURN_HOME,
         POWER_SCREEN,
         RUN_SCREEN,
+        SETTINGS_SCREEN,
     };
 
     enum class LCD_BTN_EVENT : uint32_t
@@ -56,6 +57,7 @@ private:
         RETURN_HOME,
         POWER_SCREEN,
         RUN_SCREEN,
+        SETTINGS_SCREEN,
     };
 
     static lv_obj_t *current_screen;
@@ -68,7 +70,6 @@ private:
     static const lv_img_dsc_t ampoule;
     static const lv_img_dsc_t main_bg;
     static const lv_img_dsc_t gradient_count;
-    static const lv_img_dsc_t bolt;
     static const lv_img_dsc_t rotate;
     static const lv_img_dsc_t arrow;
     static const lv_img_dsc_t circle;
@@ -95,6 +96,10 @@ private:
     static lv_obj_t *lcd_run_screen;
     static lv_obj_t *label_step_count;
     static lv_obj_t *arc_counter;
+
+    // settings screen
+    static lv_obj_t *lcd_settings_screen;
+    static lv_obj_t *label_desc_tmo_off;
 
     // physical button menu
     static lv_obj_t *button_menu;
@@ -127,6 +132,11 @@ private:
     static void run_screen();
     static void count_step_task(void *pvParameter);
     static void set_step_counter_value(uint32_t steps);
+
+    static void settings_screen();
+    static void slider_tmo_off_event_cb(lv_event_t *e);
+    static void wakeup_double_tap_event_cb(lv_event_t *e);
+    static void wakeup_tilt_event_cb(lv_event_t *e);
 };
 
 #endif

@@ -3,6 +3,8 @@ struct bma4_dev WatchBma::bma;
 uint32_t WatchBma::steps_count_save = 0;
 volatile bool WatchBma::_irq = 0;
 uint16_t WatchBma::s_int_status = 0;
+bool WatchBma::wakeup_on_double_tap = true;
+bool WatchBma::wakeup_on_tilt = false;
 
 void WatchBma::init()
 {
@@ -149,9 +151,16 @@ void WatchBma::check_int_task(void *pvParameter)
     {
         if (check_irq())
         {
-            printf("\n********* IRQ BMA *******\n");
             s_int_status |= check_int_status();
-            if ((s_int_status & BMA423_WRIST_WEAR_INT) || (s_int_status & BMA423_DOUBLE_TAP_INT))
+            if ((s_int_status & BMA423_WRIST_WEAR_INT) && wakeup_on_tilt)
+            {
+                if (!WatchTft::screen_en)
+                {
+                    WatchTft::toggle_button_menu_view();
+                    WatchTft::turn_screen_on();
+                }
+            }
+            else if ((s_int_status & BMA423_DOUBLE_TAP_INT) && wakeup_on_double_tap)
             {
                 if (!WatchTft::screen_en)
                 {
@@ -214,21 +223,34 @@ uint16_t WatchBma::check_int_status()
     int8_t rslt = bma423_read_int_status(&int_status, &bma);
     if (int_status != 0)
     {
-        printf("int_status : %u\n", int_status);
         if (int_status & BMA423_WRIST_WEAR_INT)
         {
-            printf("WRIST INT!\n");
+            printf("BMA: Wrist int\n");
         }
         else if (int_status & BMA423_DOUBLE_TAP_INT)
         {
-            printf("DOUBLE TAP INT!\n");
+            printf("BMA: Double tap int\n");
         }
         else if (int_status & BMA423_ACTIVITY_INT)
         {
-            printf("ACTIVITY INT!\n");
             uint8_t activity_output = 0;
             bma423_activity_output(&activity_output, &bma);
-            printf("activity_output %d !\n", activity_output);
+
+            char activity_desc[11] = "Stationary";
+            if (activity_output & BMA423_USER_WALKING)
+            {
+                strcpy(activity_desc, "Walking");
+            }
+            else if (activity_output & BMA423_USER_RUNNING)
+            {
+                strcpy(activity_desc, "Running");
+            }
+            else if (activity_output & BMA423_STATE_INVALID)
+            {
+                strcpy(activity_desc, "Invalid");
+            }
+
+            printf("BMA: Activity int: %s\n", activity_desc);
         }
     }
     bma4_error_codes_print_result("bma423_read_int_status status", rslt);
