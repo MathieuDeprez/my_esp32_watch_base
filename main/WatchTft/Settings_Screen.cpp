@@ -69,7 +69,7 @@ void WatchTft::settings_screen()
         lv_slider_set_value(slider_tmo_off, timer_turn_off_screen / 1000, LV_ANIM_ON);
         lv_obj_set_style_bg_color(slider_tmo_off, lv_color_hex(0xed1590), LV_PART_KNOB);
         lv_obj_set_style_bg_color(slider_tmo_off, lv_palette_main(LV_PALETTE_DEEP_PURPLE), LV_PART_INDICATOR);
-        lv_obj_add_event_cb(slider_tmo_off, slider_tmo_off_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+        lv_obj_add_event_cb(slider_tmo_off, slider_tmo_off_event_cb, LV_EVENT_ALL, NULL);
 
         lv_obj_t *hor_bar_01 = lv_obj_create(settings_bg);
         lv_obj_align(hor_bar_01, LV_ALIGN_TOP_MID, 0, 70);
@@ -135,15 +135,24 @@ void WatchTft::settings_screen()
 
 void WatchTft::slider_tmo_off_event_cb(lv_event_t *e)
 {
+    lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *slider = lv_event_get_target(e);
     timer_turn_off_screen = lv_slider_get_value(slider) * 1000;
-    std::string delay_tmo = std::to_string(timer_turn_off_screen / 1000) + "s";
+    if (code == LV_EVENT_VALUE_CHANGED)
+    {
+        std::string delay_tmo = std::to_string(timer_turn_off_screen / 1000) + "s";
 
-    // if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
-    //{
-    lv_label_set_text(label_desc_tmo_off, delay_tmo.c_str());
-    // xSemaphoreGive(xGuiSemaphore);
-    //}
+        // if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
+        //{
+        lv_label_set_text(label_desc_tmo_off, delay_tmo.c_str());
+        // xSemaphoreGive(xGuiSemaphore);
+        //}
+    }
+
+    if (code == LV_EVENT_RELEASED)
+    {
+        WatchNvs::set_tmo_screen(timer_turn_off_screen);
+    }
 }
 
 void WatchTft::wakeup_double_tap_event_cb(lv_event_t *e)
@@ -156,6 +165,7 @@ void WatchTft::wakeup_double_tap_event_cb(lv_event_t *e)
     }
     lv_state_t state = lv_obj_get_state(obj);
     WatchBma::wakeup_on_double_tap = state & LV_STATE_CHECKED;
+    WatchNvs::set_wakeup_double_tap(WatchBma::wakeup_on_double_tap);
     printf("lv_State dt: %d\n", state);
 }
 
@@ -169,5 +179,6 @@ void WatchTft::wakeup_tilt_event_cb(lv_event_t *e)
     }
     lv_state_t state = lv_obj_get_state(obj);
     WatchBma::wakeup_on_tilt = state & LV_STATE_CHECKED;
+    WatchNvs::set_wakeup_tilt(WatchBma::wakeup_on_tilt);
     printf("lv_State ti: %d\n", state);
 }

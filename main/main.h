@@ -19,11 +19,14 @@
 #include "driver/uart.h"
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 
 // my classes
 #include "WatchTft.h"
 #include "WatchPower.h"
 #include "WatchBma.h"
+#include "WatchNvs.h"
 
 // my cpp
 #include "C_AXP202X_Library/axp20x.h"

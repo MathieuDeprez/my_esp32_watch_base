@@ -17,6 +17,7 @@ void app_main()
 
     gpio_install_isr_service(0);
 
+    WatchNvs::init();
     WatchPower::init();
     WatchTft::init();
     WatchBma::init();
