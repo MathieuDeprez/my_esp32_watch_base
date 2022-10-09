@@ -100,6 +100,7 @@ private:
     // settings screen
     static lv_obj_t *lcd_settings_screen;
     static lv_obj_t *label_desc_tmo_off;
+    static lv_obj_t *label_desc_step_goal;
 
     // physical button menu
     static lv_obj_t *button_menu;
@@ -137,6 +138,7 @@ private:
     static void slider_tmo_off_event_cb(lv_event_t *e);
     static void wakeup_double_tap_event_cb(lv_event_t *e);
     static void wakeup_tilt_event_cb(lv_event_t *e);
+    static void slider_step_goal_event_cb(lv_event_t *e);
 };
 
 #endif

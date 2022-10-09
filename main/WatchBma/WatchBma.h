@@ -7,7 +7,6 @@
 #define BMA423_ANY_NO_MOTION_AXIS_EN_POS UINT8_C(5)
 #define BMA423_ANYMOTION_EN_LEN 2
 #define BMA423_INT GPIO_NUM_39
-#define STEP_COUNTER_GOAL 1000
 
 class WatchBma
 {
@@ -17,6 +16,7 @@ public:
     static uint16_t s_int_status;
     static bool wakeup_on_double_tap;
     static bool wakeup_on_tilt;
+    static uint32_t step_counter_goal;
 
     static void init();
     static uint32_t get_steps();

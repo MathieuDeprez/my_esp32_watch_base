@@ -5,6 +5,7 @@ volatile bool WatchBma::_irq = 0;
 uint16_t WatchBma::s_int_status = 0;
 bool WatchBma::wakeup_on_double_tap = true;
 bool WatchBma::wakeup_on_tilt = false;
+uint32_t WatchBma::step_counter_goal = 1000;
 
 void WatchBma::init()
 {

@@ -65,7 +65,7 @@ void WatchTft::run_screen()
         arc_counter = lv_arc_create(run_bg);
         lv_obj_align(arc_counter, LV_ALIGN_CENTER, 0, 0);
         lv_arc_set_rotation(arc_counter, 270);
-        uint16_t start_angle = (WatchBma::steps_count_save % STEP_COUNTER_GOAL) * 360 / STEP_COUNTER_GOAL;
+        uint16_t start_angle = (WatchBma::steps_count_save % WatchBma::step_counter_goal) * 360 / WatchBma::step_counter_goal;
         lv_arc_set_angles(arc_counter, 0, start_angle);
         lv_arc_set_bg_angles(arc_counter, 0, 360);
         lv_obj_set_size(arc_counter, 160, 160);
@@ -79,7 +79,7 @@ void WatchTft::run_screen()
         lv_obj_align(label_goal_step, LV_ALIGN_CENTER, 0, 32);
         lv_obj_set_style_text_align(label_goal_step, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_color(label_goal_step, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
-        std::string goal_text = LV_SYMBOL_EYE_OPEN + std::to_string(STEP_COUNTER_GOAL);
+        std::string goal_text = LV_SYMBOL_EYE_OPEN + std::to_string(WatchBma::step_counter_goal);
         lv_label_set_text(label_goal_step, goal_text.c_str());
 
         display_top_bar(lcd_run_screen, "Run");
@@ -97,7 +97,7 @@ void WatchTft::set_step_counter_value(uint32_t steps)
     {
         return;
     }
-    uint16_t angle = (steps % STEP_COUNTER_GOAL) * 360 / STEP_COUNTER_GOAL;
+    uint16_t angle = (steps % WatchBma::step_counter_goal) * 360 / WatchBma::step_counter_goal;
     lv_arc_set_angles(arc_counter, 0, angle);
     std::string step_str = std::to_string(steps);
     lv_label_set_text(label_step_count, step_str.c_str());

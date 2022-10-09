@@ -80,6 +80,24 @@ void WatchNvs::init()
         printf("Error (%s) reading!\n", esp_err_to_name(err));
     }
 
+    // Read step goal
+    printf("Reading step goal from NVS ... ");
+    uint32_t step_goal = 1000; // value will default to 0, if not set yet in NVS
+    err = nvs_get_u32(my_handle, NVS_KEY_STEP_GOAL, &step_goal);
+    switch (err)
+    {
+    case ESP_OK:
+        printf("Done\n");
+        printf("step_goal = %d\n", step_goal);
+        WatchBma::step_counter_goal = step_goal;
+        break;
+    case ESP_ERR_NVS_NOT_FOUND:
+        printf("The value is not initialized yet!\n");
+        break;
+    default:
+        printf("Error (%s) reading!\n", esp_err_to_name(err));
+    }
+
     nvs_close(my_handle);
 }
 
@@ -148,6 +166,30 @@ void WatchNvs::set_wakeup_tilt(uint8_t value)
     if (err != ESP_OK)
     {
         printf("set_wakeup_tilt failed (%s)!\n", esp_err_to_name(err));
+        vTaskDelay(1000);
+        esp_restart();
+    }
+
+    nvs_close(my_handle);
+}
+
+void WatchNvs::set_step_goal(uint32_t value)
+{
+    nvs_handle_t my_handle;
+    esp_err_t err = nvs_open(main_storage_name, NVS_READWRITE, &my_handle);
+    if (err != ESP_OK)
+    {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+        vTaskDelay(1000);
+        esp_restart();
+    }
+
+    err |= nvs_set_u32(my_handle, NVS_KEY_STEP_GOAL, value);
+    err |= nvs_commit(my_handle);
+
+    if (err != ESP_OK)
+    {
+        printf("set_step_goal failed (%s)!\n", esp_err_to_name(err));
         vTaskDelay(1000);
         esp_restart();
     }
