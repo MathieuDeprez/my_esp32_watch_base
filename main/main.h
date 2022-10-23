@@ -21,12 +21,14 @@
 #include "freertos/event_groups.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "nmea_parser.h"
 
 // my classes
 #include "WatchTft.h"
 #include "WatchPower.h"
 #include "WatchBma.h"
 #include "WatchNvs.h"
+#include "WatchGps.h"
 
 // my cpp
 #include "C_AXP202X_Library/axp20x.h"

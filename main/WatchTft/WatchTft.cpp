@@ -86,6 +86,10 @@ void WatchTft::queue_cmd_task(void *pvParameter)
             printf("SETTINGS_SCREEN\n");
             settings_screen();
             break;
+        case LCD_CMD::GPS_SCREEN:
+            printf("GPS_SCREEN\n");
+            gps_screen();
+            break;
 
         default:
             printf("unknow LCD CMD");
@@ -238,14 +242,23 @@ void WatchTft::init_home_screen(void)
         lv_obj_set_size(btn_0_2, 60, 60);
         lv_obj_set_style_bg_opa(btn_0_2, 150, LV_PART_MAIN);
         lv_obj_set_style_bg_color(btn_0_2, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
-        static LCD_BTN_EVENT cmd_reset = LCD_BTN_EVENT::RESET_ESP;
-        lv_obj_add_event_cb(btn_0_2, event_handler_main, LV_EVENT_CLICKED, &cmd_reset);
+        static LCD_BTN_EVENT cmd_gps = LCD_BTN_EVENT::GPS_SCREEN;
+        lv_obj_add_event_cb(btn_0_2, event_handler_main, LV_EVENT_CLICKED, &cmd_gps);
+
+        lv_obj_t *gps_icon = lv_label_create(btn_0_2);
+        lv_obj_align(gps_icon, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_size(gps_icon, 24, 24);
+        lv_label_set_text(gps_icon, LV_SYMBOL_GPS);
+        lv_obj_set_style_text_font(gps_icon, &lv_font_montserrat_24, 0);
+        lv_obj_set_style_text_align(gps_icon, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_add_style(gps_icon, &img_recolor_white_style, LV_PART_MAIN);
 
         lv_obj_t *btn_1_0 = lv_btn_create(main_screen);
         lv_obj_align(btn_1_0, LV_ALIGN_TOP_LEFT, 15, 120);
         lv_obj_set_size(btn_1_0, 60, 60);
         lv_obj_set_style_bg_opa(btn_1_0, 150, LV_PART_MAIN);
         lv_obj_set_style_bg_color(btn_1_0, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
+        static LCD_BTN_EVENT cmd_reset = LCD_BTN_EVENT::RESET_ESP;
         lv_obj_add_event_cb(btn_1_0, event_handler_main, LV_EVENT_CLICKED, &cmd_reset);
 
         lv_obj_t *btn_1_1 = lv_btn_create(main_screen);
@@ -545,6 +558,7 @@ void WatchTft::return_home_screen()
     {
         printf("Failed to take gui Semaphore X01\n");
     }
+    axpxx_setPowerOutPut(AXP202_LDO4, AXP202_OFF);
     label_battery = main_label_battery;
     top_menu = main_top_menu;
     slider_top_bl = main_slider_top_bl;
@@ -632,6 +646,28 @@ void WatchTft::event_handler_main(lv_event_t *e)
     {
         LCD_CMD cmd = LCD_CMD::SETTINGS_SCREEN;
         xQueueSend(xQueueLcdCmd, &cmd, 0);
+        break;
+    }
+    case LCD_BTN_EVENT::GPS_SCREEN:
+    {
+        LCD_CMD cmd = LCD_CMD::GPS_SCREEN;
+        xQueueSend(xQueueLcdCmd, &cmd, 0);
+        break;
+    }
+    case LCD_BTN_EVENT::GPS_TRACKING:
+    {
+        if (current_task_hanlde == NULL)
+        {
+            printf("Creating gps tracking task\n");
+            TaskHandle_t tracking_gps_task_hanlde = NULL;
+            xTaskCreatePinnedToCore(WatchGps::tracking_task, "tracking_gps", 4096 * 2, NULL, 0, &tracking_gps_task_hanlde, 1);
+            current_task_hanlde = tracking_gps_task_hanlde;
+        }
+        else
+        {
+            printf("Gps tracking task already exist...\n");
+        }
+
         break;
     }
 

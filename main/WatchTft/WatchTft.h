@@ -33,6 +33,9 @@ public:
     static void main_screen_from_sleep();
     static void add_chart_power_value(lv_coord_t batt, lv_coord_t vbus);
 
+    static void gps_print_info(const char *info);
+    static void gps_print_title(const char *info);
+
 private:
     enum class LCD_CMD : uint32_t
     {
@@ -43,6 +46,7 @@ private:
         POWER_SCREEN,
         RUN_SCREEN,
         SETTINGS_SCREEN,
+        GPS_SCREEN,
     };
 
     enum class LCD_BTN_EVENT : uint32_t
@@ -58,6 +62,8 @@ private:
         POWER_SCREEN,
         RUN_SCREEN,
         SETTINGS_SCREEN,
+        GPS_SCREEN,
+        GPS_TRACKING,
     };
 
     static lv_obj_t *current_screen;
@@ -102,6 +108,11 @@ private:
     static lv_obj_t *label_desc_tmo_off;
     static lv_obj_t *label_desc_step_goal;
 
+    // gps screen
+    static lv_obj_t *lcd_gps_screen;
+    static lv_obj_t *label_title_gps;
+    static lv_obj_t *label_gps_info;
+
     // physical button menu
     static lv_obj_t *button_menu;
     static lv_obj_t *lcd_turn_off_screen;
@@ -139,6 +150,9 @@ private:
     static void wakeup_double_tap_event_cb(lv_event_t *e);
     static void wakeup_tilt_event_cb(lv_event_t *e);
     static void slider_step_goal_event_cb(lv_event_t *e);
+
+    static void gps_screen();
+   
 };
 
 #endif
