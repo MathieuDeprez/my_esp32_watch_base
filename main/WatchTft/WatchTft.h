@@ -21,6 +21,7 @@ class WatchTft
 
 public:
     static bool screen_en;
+    static TaskHandle_t current_task_hanlde;
 
     static void init();
 
@@ -35,6 +36,7 @@ public:
 
     static void gps_print_info(const char *info);
     static void gps_print_title(const char *info);
+    static void set_gps_tracking_hidden_state(bool status);
 
 private:
     enum class LCD_CMD : uint32_t
@@ -68,8 +70,6 @@ private:
 
     static lv_obj_t *current_screen;
     static lv_obj_t *main_screen;
-
-    static TaskHandle_t current_task_hanlde;
 
     // images
     static const lv_img_dsc_t lune;
@@ -112,6 +112,7 @@ private:
     static lv_obj_t *lcd_gps_screen;
     static lv_obj_t *label_title_gps;
     static lv_obj_t *label_gps_info;
+    static lv_obj_t *gps_recording_indicator;
 
     // physical button menu
     static lv_obj_t *button_menu;
@@ -152,7 +153,6 @@ private:
     static void slider_step_goal_event_cb(lv_event_t *e);
 
     static void gps_screen();
-   
 };
 
 #endif

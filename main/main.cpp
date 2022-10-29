@@ -19,6 +19,7 @@ void app_main()
 
     WatchNvs::init();
     WatchPower::init();
+    WatchSd::init();
     WatchTft::init();
     WatchBma::init();
     printf("*** INIT DONE ***\n");

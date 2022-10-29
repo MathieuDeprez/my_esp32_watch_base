@@ -665,7 +665,8 @@ void WatchTft::event_handler_main(lv_event_t *e)
         }
         else
         {
-            printf("Gps tracking task already exist...\n");
+            printf("Stopping gps tracking task...\n");
+            WatchGps::gps_tracking_stop = true;
         }
 
         break;

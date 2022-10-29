@@ -22,6 +22,8 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "nmea_parser.h"
+#include "esp_vfs_fat.h"
+#include "sdmmc_cmd.h"
 
 // my classes
 #include "WatchTft.h"
@@ -29,6 +31,7 @@
 #include "WatchBma.h"
 #include "WatchNvs.h"
 #include "WatchGps.h"
+#include "WatchSd.h"
 
 // my cpp
 #include "C_AXP202X_Library/axp20x.h"

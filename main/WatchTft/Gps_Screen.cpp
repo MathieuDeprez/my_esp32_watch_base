@@ -3,6 +3,7 @@
 lv_obj_t *WatchTft::lcd_gps_screen = NULL;
 lv_obj_t *WatchTft::label_title_gps = NULL;
 lv_obj_t *WatchTft::label_gps_info = NULL;
+lv_obj_t *WatchTft::gps_recording_indicator = NULL;
 
 void WatchTft::gps_screen()
 {
@@ -33,6 +34,12 @@ void WatchTft::gps_screen()
         lv_obj_align(gps_bg, LV_ALIGN_TOP_LEFT, 0, 30);
         lv_obj_clear_flag(gps_bg, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_style(gps_bg, &gps_bg_style, LV_PART_MAIN);
+
+        gps_recording_indicator = lv_btn_create(gps_bg);
+        lv_obj_set_size(gps_recording_indicator, 10, 10);
+        lv_obj_clear_flag(gps_recording_indicator, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_align(gps_recording_indicator, LV_ALIGN_TOP_MID, 0, 180);
+        lv_obj_set_style_bg_color(gps_recording_indicator, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
 
         lv_obj_t *btn_home = lv_btn_create(gps_bg);
         lv_obj_align(btn_home, LV_ALIGN_BOTTOM_LEFT, 5, -5);
@@ -77,6 +84,30 @@ void WatchTft::gps_screen()
         xSemaphoreGive(xGuiSemaphore);
     }
     WatchGps::init();
+
+    vTaskDelay(100);
+
+    if (WatchGps::gps_tracking_stop)
+    {
+        set_gps_tracking_hidden_state(1);
+    }
+}
+
+void WatchTft::set_gps_tracking_hidden_state(bool status)
+{
+    if (pdTRUE != xSemaphoreTake(xGuiSemaphore, 50))
+    {
+        return;
+    }
+    if (status)
+    {
+        lv_obj_add_flag(gps_recording_indicator, LV_OBJ_FLAG_HIDDEN);
+    }
+    else
+    {
+        lv_obj_clear_flag(gps_recording_indicator, LV_OBJ_FLAG_HIDDEN);
+    }
+    xSemaphoreGive(xGuiSemaphore);
 }
 
 void WatchTft::gps_print_title(const char *info)
@@ -100,4 +131,3 @@ void WatchTft::gps_print_info(const char *info)
         lv_label_set_text(label_gps_info, info);
     xSemaphoreGive(xGuiSemaphore);
 }
-
