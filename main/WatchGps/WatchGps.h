@@ -16,6 +16,8 @@ public:
     static float gps_speed;
     static uint32_t gps_point_saved;
     static char gps_datetime[21];
+    static char gps_date[11];
+    static char gps_time[9];
 
     static void init();
     static void tracking_task(void *pvParameter);

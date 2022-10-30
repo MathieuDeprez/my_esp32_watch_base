@@ -8,6 +8,8 @@ float WatchGps::gps_altitude = 0;
 uint32_t WatchGps::gps_point_saved = 0;
 float WatchGps::gps_speed = 0;
 char WatchGps::gps_datetime[21] = "2016-07-17T08:30:28Z";
+char WatchGps::gps_date[11] = "2016-07-17";
+char WatchGps::gps_time[9] = "08-30-28";
 void WatchGps::init()
 {
     axpxx_setPowerOutPut(AXP202_LDO4, AXP202_ON);
@@ -30,52 +32,8 @@ void WatchGps::tracking_task(void *pvParameter)
     gps_tracking_stop = false;
     WatchTft::set_gps_tracking_hidden_state(0);
 
-    char gps_file_name[21];
-
-    // reseed the random number generator
-    srand(time(NULL));
-
-    gps_file_name[0] = '/';
-    gps_file_name[1] = 's';
-    gps_file_name[2] = 'd';
-    gps_file_name[3] = 'c';
-    gps_file_name[4] = 'a';
-    gps_file_name[5] = 'r';
-    gps_file_name[6] = 'd';
-    gps_file_name[7] = '/';
-    for (uint8_t i = 8; i < 16; i++)
-    {
-        // Add random printable ASCII char
-        gps_file_name[i] = (rand() % ('z' - 'a')) + 'a';
-    }
-    gps_file_name[16] = '.';
-    gps_file_name[17] = 'g';
-    gps_file_name[18] = 'p';
-    gps_file_name[19] = 'x';
-    gps_file_name[20] = '\0';
-
-    printf("gps_file_name: %s\n", gps_file_name);
-
-    char start_file[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                        "<gpx>\n"
-                        "<trk>\n"
-                        "<name>esp_gpx</name>\n"
-                        "<type>Running</type>\n"
-                        "<trkseg>\n";
-
-    FILE *f = fopen(gps_file_name, "w");
-    if (f == NULL)
-    {
-        printf("Failed to open gps_file for writing\n");
-
-        gps_tracking_stop = true;
-        WatchTft::set_gps_tracking_hidden_state(1);
-        WatchTft::current_task_hanlde = NULL;
-        vTaskDelete(NULL);
-    }
-    fwrite(start_file, strlen(start_file), 1, f);
-    fclose(f);
-    printf("Gps_file written\n");
+    char gps_file_name[32] = {};
+    //  "/sdcard/2016-07-17-08:30:28.gpx";
 
     gps_point_saved = 0;
 
@@ -92,6 +50,36 @@ void WatchGps::tracking_task(void *pvParameter)
             if (gps_status != gps_fix_mode_t::GPS_MODE_INVALID /*|| true*/)
             {
                 printf("Saving pos to SD\n");
+
+                if (strlen(gps_file_name) == 0)
+                {
+                    sprintf(gps_file_name, "/sdcard/%s-%s.gpx",
+                            gps_date,
+                            gps_time);
+
+                    printf("new gps_file_name: %s\n", gps_file_name);
+
+                    char start_file[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                        "<gpx>\n"
+                                        "<trk>\n"
+                                        "<name>esp_gpx</name>\n"
+                                        "<type>Running</type>\n"
+                                        "<trkseg>\n";
+
+                    FILE *f = fopen(gps_file_name, "w");
+                    if (f == NULL)
+                    {
+                        printf("Failed to open gps_file for writing\n");
+
+                        gps_tracking_stop = true;
+                        WatchTft::set_gps_tracking_hidden_state(1);
+                        WatchTft::current_task_hanlde = NULL;
+                        vTaskDelete(NULL);
+                    }
+                    fwrite(start_file, strlen(start_file), 1, f);
+                    fclose(f);
+                    printf("Gps_file start written\n");
+                }
 
                 if (gps_status == gps_fix_mode_t::GPS_MODE_INVALID)
                 {
@@ -159,12 +147,6 @@ void WatchGps::tracking_task(void *pvParameter)
             printf("\n");
 
             fclose(f);
-
-            if (gps_point_saved == 0)
-            {
-                printf("remove gps_file because no point\n");
-                remove(gps_file_name);
-            }
 
             WatchTft::set_gps_tracking_hidden_state(1);
             WatchTft::current_task_hanlde = NULL;
@@ -243,6 +225,14 @@ void WatchGps::gps_event_handler(void *event_handler_arg, esp_event_base_t event
                     gps->date.year + YEAR_BASE,
                     gps->date.month,
                     gps->date.day,
+                    gps->tim.hour + TIME_ZONE,
+                    gps->tim.minute,
+                    gps->tim.second);
+            sprintf(gps_date, "%hu-%hhu-%hhu",
+                    gps->date.year + YEAR_BASE,
+                    gps->date.month,
+                    gps->date.day);
+            sprintf(gps_time, "%hhu-%hhu-%hhu",
                     gps->tim.hour + TIME_ZONE,
                     gps->tim.minute,
                     gps->tim.second);
