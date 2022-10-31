@@ -127,27 +127,30 @@ void WatchGps::tracking_task(void *pvParameter)
             if (f == NULL)
             {
                 printf("Failed to open gps_file for end appending\n");
-                continue;
             }
-            fwrite(end_file, strlen(end_file), 1, f);
-            fclose(f);
-            printf("Gps_file written\n");
-
+            else
+            {
+                fwrite(end_file, strlen(end_file), 1, f);
+                fclose(f);
+                printf("Gps_file written\n");
+            }
+            
             f = fopen(gps_file_name, "r");
             if (f == NULL)
             {
                 printf("Failed to open gps_file for end reading\n");
-                continue;
             }
-            char currentline[100];
-            while (fgets(currentline, sizeof(currentline), f) != NULL)
+            else
             {
-                printf("%s", currentline);
+                char currentline[100];
+                while (fgets(currentline, sizeof(currentline), f) != NULL)
+                {
+                    printf("%s", currentline);
+                }
+                printf("\n");
+
+                fclose(f);
             }
-            printf("\n");
-
-            fclose(f);
-
             WatchTft::set_gps_tracking_hidden_state(1);
             WatchTft::current_task_hanlde = NULL;
             vTaskDelete(NULL);
