@@ -14,7 +14,7 @@ uint8_t WatchTft::bl_value = 75;
 bool WatchTft::screen_en = true;
 
 // top menu
-lv_obj_t *WatchTft::label_battery;
+lv_obj_t *WatchTft::label_battery = NULL;
 lv_obj_t *WatchTft::top_menu;
 lv_obj_t *WatchTft::main_label_battery;
 lv_obj_t *WatchTft::main_top_menu;
@@ -103,6 +103,8 @@ void WatchTft::gui_task(void *pvParameter)
     (void)pvParameter;
 
     lv_init();
+
+    lv_png_init();
 
     /* Initialize SPI or I2C bus used by the drivers */
     bckl_handle = lvgl_driver_init();
@@ -671,6 +673,47 @@ void WatchTft::event_handler_main(lv_event_t *e)
 
         break;
     }
+    case LCD_BTN_EVENT::CENTER_GPS:
+    {
+        WatchTft::center_gps();
+        break;
+    }
+    case LCD_BTN_EVENT::CLEAN_FILE:
+    {
+        // Open the directory
+        DIR *dir = opendir(MOUNT_POINT "/");
+        if (dir == NULL)
+        {
+            printf("Error opendir\n");
+            break;
+        }
+
+        // Read the directory entries
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL)
+        {
+            // Check if the file name starts with the specified word
+            if (strncmp(entry->d_name, "map_15_", strlen("map_15_")) == 0)
+            {
+                // Construct the full path of the file
+                char path[300];
+                snprintf(path, sizeof(path), MOUNT_POINT "/%s", entry->d_name);
+
+                printf("Remove: %s\n", path);
+                // Remove the file
+                if (remove(path) != 0)
+                {
+                    perror("remove");
+                    break;
+                }
+            }
+        }
+
+        // Close the directory
+        closedir(dir);
+
+        break;
+    }
 
     default:
         break;
@@ -794,7 +837,16 @@ void WatchTft::turn_screen_off()
 
 void WatchTft::set_battery_text(uint8_t percent)
 {
+    if (label_battery == NULL)
+    {
+        return;
+    }
     std::string battery_percent = std::to_string(percent) + "%";
     s_battery_percent = percent;
-    lv_label_set_text(label_battery, battery_percent.c_str());
+
+    if (xSemaphoreTake(xGuiSemaphore, 0) == pdTRUE)
+    {
+        lv_label_set_text(label_battery, battery_percent.c_str());
+        xSemaphoreGive(xGuiSemaphore);
+    }
 }

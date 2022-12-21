@@ -21,9 +21,12 @@
 #include "freertos/event_groups.h"
 #include "nvs_flash.h"
 #include "nvs.h"
-#include "nmea_parser.h"
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_http_client.h"
+#include <dirent.h>
 
 // my classes
 #include "WatchTft.h"
@@ -32,6 +35,8 @@
 #include "WatchNvs.h"
 #include "WatchGps.h"
 #include "WatchSd.h"
+#include "home_gps.h"
+#include "WatchWiFi.h"
 
 // my cpp
 #include "C_AXP202X_Library/axp20x.h"

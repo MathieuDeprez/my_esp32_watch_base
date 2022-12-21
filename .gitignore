@@ -1,2 +1,4 @@
 build/
 .vscode/settings.json
+main/WatchWiFi/wifi_credentials.h
+main/WatchGps/home_gps.h

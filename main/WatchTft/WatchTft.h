@@ -14,7 +14,7 @@
     if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)) \
     {
 
-//#define DISPLAY_TOUCH_LIMIT
+// #define DISPLAY_TOUCH_LIMIT
 
 class WatchTft
 {
@@ -22,6 +22,8 @@ class WatchTft
 public:
     static bool screen_en;
     static TaskHandle_t current_task_hanlde;
+
+    static const lv_img_dsc_t download;
 
     static void init();
 
@@ -34,9 +36,11 @@ public:
     static void main_screen_from_sleep();
     static void add_chart_power_value(lv_coord_t batt, lv_coord_t vbus);
 
-    static void gps_print_info(const char *info);
-    static void gps_print_title(const char *info);
+    static void set_gps_info(bool fixed, uint8_t in_use, float dop, double lat, double lon);
     static void set_gps_tracking_hidden_state(bool status);
+
+    static void refresh_tile(int32_t x, int32_t y);
+    static void add_gps_pos(int32_t x, int32_t y);
 
 private:
     enum class LCD_CMD : uint32_t
@@ -66,6 +70,8 @@ private:
         SETTINGS_SCREEN,
         GPS_SCREEN,
         GPS_TRACKING,
+        CENTER_GPS,
+        CLEAN_FILE,
     };
 
     static lv_obj_t *current_screen;
@@ -153,6 +159,10 @@ private:
     static void slider_step_goal_event_cb(lv_event_t *e);
 
     static void gps_screen();
+    static void center_gps();
+    static lv_point_t drag_view(int32_t x, int32_t y, bool sem_taken = false);
+    static void drag_event_handler(lv_event_t *e);
+    static void add_xy_to_gps_point(int32_t x, int32_t y, bool sem_taken = false);
 };
 
 #endif
