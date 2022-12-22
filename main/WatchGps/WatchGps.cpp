@@ -7,25 +7,60 @@ WatchGps::esp_gps_t WatchGps::global_gps = {};
 WatchGps::gps_t WatchGps::gps_saved = {};
 uint32_t WatchGps::gps_point_saved = 0;
 
+bool WatchGps::gps_enabled = false;
+bool WatchGps::gps_fixed = false;
+
 double WatchGps::gps_lat = HOME_LAT;
 double WatchGps::gps_lon = HOME_LON;
 
-void WatchGps::init()
-{
-    axpxx_setPowerOutPut(AXP202_LDO4, AXP202_ON);
+WatchGps::esp_gps_t *WatchGps::esp_gps = NULL;
 
-    static bool is_gps_init_done = false;
-    if (!is_gps_init_done)
+void WatchGps::set_state_gps(bool state)
+{
+    static bool old_state = false;
+    if (state == old_state)
     {
+        return;
+    }
+
+    if (state)
+    {
+        axpxx_setPowerOutPut(AXP202_LDO4, AXP202_ON);
+
         nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
         nmea_parser_handle_t nmea_hdl = nmea_parser_init(&config);
-        is_gps_init_done = true;
+
+        // Create NMEA Parser task
+        BaseType_t err = xTaskCreate(
+            nmea_parser_task_entry,
+            "nmea_parser",
+            CONFIG_NMEA_PARSER_TASK_STACK_SIZE,
+            esp_gps,
+            CONFIG_NMEA_PARSER_TASK_PRIORITY,
+            &esp_gps->tsk_hdl);
+        if (err != pdTRUE)
+        {
+            printf("create NMEA Parser task failed\n");
+            uart_driver_delete(esp_gps->uart_port);
+            free(esp_gps->buffer);
+            free(esp_gps);
+        }
     }
+    else
+    {
+        axpxx_setPowerOutPut(AXP202_LDO4, AXP202_OFF);
+        vTaskDelete(esp_gps->tsk_hdl);
+        uart_driver_delete(esp_gps->uart_port);
+        free(esp_gps->buffer);
+        free(esp_gps);
+    }
+
+    old_state = state;
 }
 
 WatchGps::nmea_parser_handle_t WatchGps::nmea_parser_init(const nmea_parser_config_t *config)
 {
-    esp_gps_t *esp_gps = (esp_gps_t *)calloc(1, sizeof(esp_gps_t));
+    esp_gps = (esp_gps_t *)calloc(1, sizeof(esp_gps_t));
     if (!esp_gps)
     {
         printf("calloc memory for esp_fps failed\n");
@@ -99,22 +134,6 @@ WatchGps::nmea_parser_handle_t WatchGps::nmea_parser_init(const nmea_parser_conf
 
     uart_flush(esp_gps->uart_port);
 
-    // Create NMEA Parser task
-    BaseType_t err = xTaskCreate(
-        nmea_parser_task_entry,
-        "nmea_parser",
-        CONFIG_NMEA_PARSER_TASK_STACK_SIZE,
-        esp_gps,
-        CONFIG_NMEA_PARSER_TASK_PRIORITY,
-        &esp_gps->tsk_hdl);
-    if (err != pdTRUE)
-    {
-        printf("create NMEA Parser task failed\n");
-        uart_driver_delete(esp_gps->uart_port);
-        free(esp_gps->buffer);
-        free(esp_gps);
-        return NULL;
-    }
     printf("NMEA Parser init OK\n");
     return esp_gps;
 }
@@ -172,7 +191,7 @@ void WatchGps::nmea_parser_task_entry(void *arg)
 
             WatchGps::gps_status = gps->fix_mode;
 
-            if (gps->fix_mode == gps_fix_mode_t::GPS_MODE_INVALID)
+            if (!gps->fix_mode || gps->fix_mode == gps_fix_mode_t::GPS_MODE_INVALID)
             {
                 WatchTft::set_gps_info(false, gps->sats_in_view, gps->dop_p, gps->latitude, gps->longitude);
             }
@@ -183,9 +202,10 @@ void WatchGps::nmea_parser_task_entry(void *arg)
                 memcpy(&WatchGps::gps_saved, gps, sizeof(WatchGps::gps_saved));
             }
 
-            printf("%d/%d/%d %d:%d:%d => view %d, use %d, lat %.05f, lon %.05f, alt: %.02f, dop %.2f\r\n",
+            printf("%d/%d/%d %d:%d:%d => fixed %d view %d, use %d, lat %.05f, lon %.05f, alt: %.02f, dop %.2f\r\n",
                    gps->date.year + YEAR_BASE, gps->date.month, gps->date.day,
                    gps->tim.hour + TIME_ZONE, gps->tim.minute, gps->tim.second,
+                   gps->fix_mode > 1,
                    gps->sats_in_view, gps->sats_in_use, gps->latitude, gps->longitude, gps->altitude,
                    gps->dop_p);
 
@@ -827,7 +847,6 @@ void WatchGps::parse_gptxt(esp_gps_t *esp_gps)
 void WatchGps::tracking_task(void *pvParameter)
 {
     gps_tracking_stop = false;
-    WatchTft::set_gps_tracking_hidden_state(0);
 
     char gps_file_name[32] = {};
     //  "/sdcard/2016-07-17-08:30:28.gpx";
@@ -882,7 +901,6 @@ void WatchGps::tracking_task(void *pvParameter)
                         printf("Failed to open gps_file for writing\n");
 
                         gps_tracking_stop = true;
-                        WatchTft::set_gps_tracking_hidden_state(1);
                         WatchTft::current_task_hanlde = NULL;
                         vTaskDelete(NULL);
                     }
@@ -978,7 +996,6 @@ void WatchGps::tracking_task(void *pvParameter)
 
                 fclose(f);
             }
-            WatchTft::set_gps_tracking_hidden_state(1);
             WatchTft::current_task_hanlde = NULL;
             vTaskDelete(NULL);
         }

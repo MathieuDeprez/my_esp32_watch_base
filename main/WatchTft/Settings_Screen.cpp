@@ -1,6 +1,5 @@
 #include "WatchTft.h"
 
-lv_obj_t *WatchTft::lcd_settings_screen = NULL;
 lv_obj_t *WatchTft::label_desc_tmo_off = NULL;
 lv_obj_t *WatchTft::label_desc_step_goal = NULL;
 
@@ -8,27 +7,22 @@ void WatchTft::settings_screen()
 {
     lv_obj_t *settings_bg = NULL;
 
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
+    static bool init_style_done = false;
+    static lv_style_t settings_bg_style;
+    if (!init_style_done)
     {
-
-        if (lcd_settings_screen != NULL)
-        {
-            lv_obj_clean(lcd_settings_screen);
-            lcd_settings_screen = NULL;
-        }
-        lcd_settings_screen = lv_obj_create(NULL);
-        lv_scr_load(lcd_settings_screen);
-        current_screen = lcd_settings_screen;
-        lv_obj_clear_flag(lcd_settings_screen, LV_OBJ_FLAG_SCROLLABLE);
-
-        static lv_style_t settings_bg_style;
         lv_style_init(&settings_bg_style);
         lv_style_set_bg_color(&settings_bg_style, lv_color_black());
         lv_style_set_radius(&settings_bg_style, 0);
         lv_style_set_border_width(&settings_bg_style, 0);
         lv_style_set_pad_all(&settings_bg_style, 0);
+        init_style_done = true;
+    }
 
-        settings_bg = lv_obj_create(lcd_settings_screen);
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
+    {
+
+        settings_bg = lv_obj_create(current_screen);
         lv_obj_set_size(settings_bg, 240, 210);
         lv_obj_align(settings_bg, LV_ALIGN_TOP_LEFT, 0, 30);
         lv_obj_clear_flag(settings_bg, LV_OBJ_FLAG_SCROLLABLE);
@@ -160,8 +154,6 @@ void WatchTft::settings_screen()
         lv_obj_set_size(hor_bar_03, 200, 2);
         lv_obj_set_style_bg_color(hor_bar_03, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
         lv_obj_set_style_border_width(hor_bar_03, 0, LV_PART_MAIN);
-
-        display_top_bar(lcd_settings_screen, "Settings");
 
         xSemaphoreGive(xGuiSemaphore);
     }

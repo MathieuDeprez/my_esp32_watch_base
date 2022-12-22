@@ -20,6 +20,14 @@ class WatchTft
 {
 
 public:
+    enum class screen_index_t
+    {
+        main = 1,
+        power = 2,
+        run = 3,
+        settings = 4,
+        gps = 5,
+    };
     static bool screen_en;
     static TaskHandle_t current_task_hanlde;
 
@@ -37,10 +45,12 @@ public:
     static void add_chart_power_value(lv_coord_t batt, lv_coord_t vbus);
 
     static void set_gps_info(bool fixed, uint8_t in_use, float dop, double lat, double lon);
-    static void set_gps_tracking_hidden_state(bool status);
 
     static void refresh_tile(int32_t x, int32_t y);
     static void add_gps_pos(int32_t x, int32_t y);
+
+    static void set_wifi_state(bool enable, bool connected);
+    static void set_gps_state(bool enable, bool fixed);
 
 private:
     enum class LCD_CMD : uint32_t
@@ -75,7 +85,8 @@ private:
     };
 
     static lv_obj_t *current_screen;
-    static lv_obj_t *main_screen;
+    static lv_obj_t *top_menu;
+    static lv_obj_t *button_menu;
 
     // images
     static const lv_img_dsc_t lune;
@@ -89,15 +100,10 @@ private:
 
     // top menu
     static lv_obj_t *label_battery;
-    static lv_obj_t *top_menu;
-    static lv_obj_t *main_label_battery;
-    static lv_obj_t *main_top_menu;
     static lv_obj_t *slider_top_bl;
-    static lv_obj_t *main_slider_top_bl;
     static uint8_t s_battery_percent;
 
     // power screen
-    static lv_obj_t *lcd_power_screen;
     static lv_obj_t *chart_power;
     static lv_obj_t *label_chart_usb;
     static lv_obj_t *label_chart_bat;
@@ -105,23 +111,20 @@ private:
     static lv_chart_series_t *power_chart_ser_usb;
 
     // run screen
-    static lv_obj_t *lcd_run_screen;
     static lv_obj_t *label_step_count;
     static lv_obj_t *arc_counter;
 
     // settings screen
-    static lv_obj_t *lcd_settings_screen;
     static lv_obj_t *label_desc_tmo_off;
     static lv_obj_t *label_desc_step_goal;
 
     // gps screen
-    static lv_obj_t *lcd_gps_screen;
     static lv_obj_t *label_title_gps;
     static lv_obj_t *label_gps_info;
     static lv_obj_t *gps_recording_indicator;
+    static lv_obj_t *btn_start_tracking;
 
     // physical button menu
-    static lv_obj_t *button_menu;
     static lv_obj_t *lcd_turn_off_screen;
     static lv_obj_t *lcd_reset_screen;
     static lv_obj_t *lcd_sleep_screen;
@@ -132,6 +135,13 @@ private:
 
     static SemaphoreHandle_t xGuiSemaphore;
     static QueueHandle_t xQueueLcdCmd;
+
+    static lv_obj_t *img_wifi;
+    static lv_obj_t *line_wifi;
+    static lv_obj_t *img_gps;
+    static lv_obj_t *line_gps;
+
+    static screen_index_t current_screen_index;
 
     static void lv_tick_task(void *arg);
     static void gui_task(void *pvParameter);
@@ -144,9 +154,10 @@ private:
     static void sleep_screen();
     static void reset_screen();
     static void power_screen();
-    static void return_home_screen();
-    static void display_top_bar(lv_obj_t *parent, const char *title);
-    static void show_button_menu();
+    static void load_screen(screen_index_t screen_index);
+    static void load_main_screen();
+    static void load_top_bar(const char *title);
+    static void load_button_menu();
 
     static void run_screen();
     static void count_step_task(void *pvParameter);
@@ -163,6 +174,8 @@ private:
     static lv_point_t drag_view(int32_t x, int32_t y, bool sem_taken = false);
     static void drag_event_handler(lv_event_t *e);
     static void add_xy_to_gps_point(int32_t x, int32_t y, bool sem_taken = false);
+
+    static void top_menu_event_handler(lv_event_t *e);
 };
 
 #endif

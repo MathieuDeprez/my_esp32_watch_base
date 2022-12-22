@@ -1,6 +1,5 @@
 #include "WatchTft.h"
 
-lv_obj_t *WatchTft::lcd_gps_screen = NULL;
 lv_obj_t *WatchTft::label_title_gps = NULL;
 lv_obj_t *WatchTft::label_gps_info = NULL;
 lv_obj_t *WatchTft::gps_recording_indicator = NULL;
@@ -11,7 +10,7 @@ lv_style_t arc_gps_style;
 lv_obj_t *arc_gps_status = NULL;
 lv_obj_t *label_gps_status = NULL;
 
-lv_obj_t *btn_start_tracking = NULL;
+lv_obj_t *WatchTft::btn_start_tracking = NULL;
 lv_obj_t *btn_center_gps = NULL;
 lv_obj_t *btn_pos_gps = NULL;
 lv_point_t btn_pos_gps_point = {};
@@ -426,6 +425,22 @@ void WatchTft::center_gps()
 void WatchTft::gps_screen()
 {
 
+    static bool init_style_done = false;
+    static lv_style_t gps_bg_style;
+    if (!init_style_done)
+    {
+        lv_style_init(&gps_bg_style);
+        lv_style_set_bg_color(&gps_bg_style, lv_color_black());
+        lv_style_set_radius(&gps_bg_style, 0);
+        lv_style_set_border_width(&gps_bg_style, 0);
+        lv_style_set_pad_all(&gps_bg_style, 0);
+
+        lv_style_init(&arc_gps_style);
+        lv_style_set_arc_color(&arc_gps_style, lv_palette_main(LV_PALETTE_RED));
+        lv_style_set_arc_width(&arc_gps_style, 5);
+        init_style_done = true;
+    }
+
     tile_x = WatchGps::lon_to_tile_x(WatchGps::gps_lon);
     tile_y = WatchGps::lat_lon_to_tile_y(WatchGps::gps_lat, WatchGps::gps_lon);
     printf("tile_x: %u, tile_y: %u\n", tile_x, tile_y);
@@ -451,24 +466,7 @@ void WatchTft::gps_screen()
     if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
     {
 
-        if (lcd_gps_screen != NULL)
-        {
-            lv_obj_clean(lcd_gps_screen);
-            lcd_gps_screen = NULL;
-        }
-        lcd_gps_screen = lv_obj_create(NULL);
-        lv_scr_load(lcd_gps_screen);
-        current_screen = lcd_gps_screen;
-        lv_obj_clear_flag(lcd_gps_screen, LV_OBJ_FLAG_SCROLLABLE);
-
-        static lv_style_t gps_bg_style;
-        lv_style_init(&gps_bg_style);
-        lv_style_set_bg_color(&gps_bg_style, lv_color_black());
-        lv_style_set_radius(&gps_bg_style, 0);
-        lv_style_set_border_width(&gps_bg_style, 0);
-        lv_style_set_pad_all(&gps_bg_style, 0);
-
-        gps_bg = lv_obj_create(lcd_gps_screen);
+        gps_bg = lv_obj_create(current_screen);
         lv_obj_set_size(gps_bg, 240, 210);
         lv_obj_align(gps_bg, LV_ALIGN_TOP_LEFT, 0, 30);
         lv_obj_clear_flag(gps_bg, LV_OBJ_FLAG_SCROLLABLE);
@@ -567,10 +565,6 @@ void WatchTft::gps_screen()
         lv_arc_set_angles(arc_gps_status, 0, 260);
         lv_obj_set_size(arc_gps_status, 40, 40);
         lv_arc_set_rotation(arc_gps_status, -135);
-
-        lv_style_init(&arc_gps_style);
-        lv_style_set_arc_color(&arc_gps_style, lv_palette_main(LV_PALETTE_RED));
-        lv_style_set_arc_width(&arc_gps_style, 5);
         lv_obj_add_style(arc_gps_status, &arc_gps_style, LV_PART_INDICATOR);
         lv_obj_remove_style(arc_gps_status, NULL, LV_PART_KNOB);
         lv_obj_clear_flag(arc_gps_status, LV_OBJ_FLAG_CLICKABLE);
@@ -659,8 +653,6 @@ void WatchTft::gps_screen()
         lv_img_set_angle(img_home, 1800);
         lv_obj_add_style(img_home, &img_recolor_white_style, LV_PART_MAIN);
 
-        display_top_bar(lcd_gps_screen, "GPS");
-
         btn_pos_gps_point.x = gps_screen_x;
         btn_pos_gps_point.y = gps_screen_y;
 
@@ -681,30 +673,11 @@ void WatchTft::gps_screen()
         printf("**map_bg_p_points[0].x: %d, map_bg_p_points[0].y: %d\n", map_bg_p_points[0].x, map_bg_p_points[0].y);
 
         xSemaphoreGive(xGuiSemaphore);
-
-        WatchGps::init();
     }
     else
     {
         printf("Sem not takn !!!\n");
     }
-}
-
-void WatchTft::set_gps_tracking_hidden_state(bool status)
-{
-    if (pdTRUE != xSemaphoreTake(xGuiSemaphore, 50))
-    {
-        return;
-    }
-    if (status)
-    {
-        lv_obj_add_flag(gps_recording_indicator, LV_OBJ_FLAG_HIDDEN);
-    }
-    else
-    {
-        lv_obj_clear_flag(gps_recording_indicator, LV_OBJ_FLAG_HIDDEN);
-    }
-    xSemaphoreGive(xGuiSemaphore);
 }
 
 void WatchTft::set_gps_info(bool fixed, uint8_t in_use, float dop, double lat, double lon)
@@ -715,6 +688,17 @@ void WatchTft::set_gps_info(bool fixed, uint8_t in_use, float dop, double lat, d
     static float last_dop = 0;
     static double last_lat = WatchGps::gps_lat;
     static double last_lon = WatchGps::gps_lon;
+
+    if (fixed != WatchGps::gps_fixed)
+    {
+        WatchGps::gps_fixed = fixed;
+        WatchTft::set_gps_state(WatchGps::gps_enabled, WatchGps::gps_fixed);
+    }
+
+    if (current_screen_index != screen_index_t::gps)
+    {
+        return;
+    }
 
     if (fixed && in_use == 0)
     {
@@ -763,25 +747,21 @@ void WatchTft::set_gps_info(bool fixed, uint8_t in_use, float dop, double lat, d
 
     if (dop_changed)
     {
-        if (xSemaphoreTake(xGuiSemaphore, 0) == pdTRUE)
+        if (dop < 1)
         {
-            if (dop < 1)
-            {
-                lv_arc_set_angles(arc_gps_status, 0, 260);
-            }
-            else if (dop < 2)
-            {
-                lv_arc_set_angles(arc_gps_status, 20, 240);
-            }
-            else if (dop < 5)
-            {
-                lv_arc_set_angles(arc_gps_status, 60, 200);
-            }
-            else
-            {
-                lv_arc_set_angles(arc_gps_status, 100, 160);
-            }
-            xSemaphoreGive(xGuiSemaphore);
+            lv_arc_set_angles(arc_gps_status, 0, 260);
+        }
+        else if (dop < 2)
+        {
+            lv_arc_set_angles(arc_gps_status, 20, 240);
+        }
+        else if (dop < 5)
+        {
+            lv_arc_set_angles(arc_gps_status, 60, 200);
+        }
+        else
+        {
+            lv_arc_set_angles(arc_gps_status, 100, 160);
         }
     }
 
@@ -789,39 +769,23 @@ void WatchTft::set_gps_info(bool fixed, uint8_t in_use, float dop, double lat, d
     {
         if (fixed)
         {
-            if (xSemaphoreTake(xGuiSemaphore, 0) == pdTRUE)
-            {
-                lv_style_set_arc_color(&arc_gps_style, lv_palette_main(LV_PALETTE_GREEN));
-                lv_obj_set_style_text_color(label_gps_status, lv_palette_main(LV_PALETTE_GREEN), LV_PART_MAIN);
-                xSemaphoreGive(xGuiSemaphore);
-            }
+            lv_style_set_arc_color(&arc_gps_style, lv_palette_main(LV_PALETTE_GREEN));
+            lv_obj_set_style_text_color(label_gps_status, lv_palette_main(LV_PALETTE_GREEN), LV_PART_MAIN);
         }
         else
         {
-            if (xSemaphoreTake(xGuiSemaphore, 0) == pdTRUE)
-            {
-                lv_style_set_arc_color(&arc_gps_style, lv_palette_main(LV_PALETTE_RED));
-                lv_obj_set_style_text_color(label_gps_status, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
-                xSemaphoreGive(xGuiSemaphore);
-            }
+            lv_style_set_arc_color(&arc_gps_style, lv_palette_main(LV_PALETTE_RED));
+            lv_obj_set_style_text_color(label_gps_status, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
         }
 
-        if (xSemaphoreTake(xGuiSemaphore, 0) == pdTRUE)
-        {
-            lv_obj_add_style(arc_gps_status, &arc_gps_style, LV_PART_INDICATOR);
-            xSemaphoreGive(xGuiSemaphore);
-        }
+        lv_obj_add_style(arc_gps_status, &arc_gps_style, LV_PART_INDICATOR);
     }
 
     if (in_use_changed)
     {
         char sat_in_use[5] = {};
         sprintf(sat_in_use, "%d", in_use);
-        if (xSemaphoreTake(xGuiSemaphore, 0) == pdTRUE)
-        {
-            lv_label_set_text(label_gps_status, sat_in_use);
-            xSemaphoreGive(xGuiSemaphore);
-        }
+        lv_label_set_text(label_gps_status, sat_in_use);
     }
 
     xSemaphoreGive(xGuiSemaphore);

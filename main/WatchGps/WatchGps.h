@@ -154,6 +154,9 @@ public:
         GPS_UNKNOWN /*!< Unknown statements detected */
     } nmea_event_id_t;
 
+    static bool gps_enabled;
+    static bool gps_fixed;
+
     static bool gps_tracking_stop;
     static uint32_t gps_point_saved;
     static gps_t gps_saved;
@@ -167,7 +170,6 @@ public:
     // static char gps_date[11];
     // static char gps_time[9];
 
-    static void init();
     static void tracking_task(void *pvParameter);
 
     static nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t *config);
@@ -179,7 +181,10 @@ public:
     static uint32_t lon_to_x(double lon);
     static uint32_t lat_lon_to_y(double lat, double lon);
 
+    static void set_state_gps(bool state);
+
 private:
+    static esp_gps_t *esp_gps;
     // static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
     static void nmea_parser_task_entry(void *arg);
     static esp_err_t gps_decode(uint8_t *buff_uart, size_t len);

@@ -1,7 +1,6 @@
 #include "WatchTft.h"
 
 // chart power
-lv_obj_t *WatchTft::lcd_power_screen = NULL;
 lv_obj_t *WatchTft::chart_power = NULL;
 lv_obj_t *WatchTft::label_chart_usb;
 lv_obj_t *WatchTft::label_chart_bat;
@@ -12,27 +11,22 @@ void WatchTft::power_screen()
 {
     lv_obj_t *power_bg = NULL;
 
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
+    static bool init_style_done = false;
+    static lv_style_t power_bg_style;
+    if (!init_style_done)
     {
-
-        if (lcd_power_screen != NULL)
-        {
-            lv_obj_clean(lcd_power_screen);
-            lcd_power_screen = NULL;
-        }
-        lcd_power_screen = lv_obj_create(NULL);
-        lv_scr_load(lcd_power_screen);
-        current_screen = lcd_power_screen;
-        lv_obj_clear_flag(lcd_power_screen, LV_OBJ_FLAG_SCROLLABLE);
-
-        static lv_style_t power_bg_style;
         lv_style_init(&power_bg_style);
         lv_style_set_bg_color(&power_bg_style, lv_color_black());
         lv_style_set_radius(&power_bg_style, 0);
         lv_style_set_border_width(&power_bg_style, 0);
         lv_style_set_pad_all(&power_bg_style, 0);
+        init_style_done = true;
+    }
 
-        power_bg = lv_obj_create(lcd_power_screen);
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
+    {
+
+        power_bg = lv_obj_create(current_screen);
         lv_obj_set_size(power_bg, 240, 210);
         lv_obj_align(power_bg, LV_ALIGN_TOP_LEFT, 0, 30);
         lv_obj_clear_flag(power_bg, LV_OBJ_FLAG_SCROLLABLE);
@@ -86,8 +80,6 @@ void WatchTft::power_screen()
         }
 
         lv_chart_refresh(chart_power);
-
-        display_top_bar(lcd_power_screen, "Power");
 
         xSemaphoreGive(xGuiSemaphore);
     }

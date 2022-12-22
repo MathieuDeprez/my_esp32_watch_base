@@ -1,34 +1,29 @@
 #include "WatchTft.h"
 
-lv_obj_t *WatchTft::lcd_run_screen = NULL;
 lv_obj_t *WatchTft::label_step_count = NULL;
 lv_obj_t *WatchTft::arc_counter = NULL;
 
 void WatchTft::run_screen()
 {
+    printf("run_screen()\n");
     lv_obj_t *run_bg = NULL;
 
-    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
+    static bool init_style_done = false;
+    static lv_style_t run_bg_style;
+    if (!init_style_done)
     {
-
-        if (lcd_run_screen != NULL)
-        {
-            lv_obj_clean(lcd_run_screen);
-            lcd_run_screen = NULL;
-        }
-        lcd_run_screen = lv_obj_create(NULL);
-        lv_scr_load(lcd_run_screen);
-        current_screen = lcd_run_screen;
-        lv_obj_clear_flag(lcd_run_screen, LV_OBJ_FLAG_SCROLLABLE);
-
-        static lv_style_t run_bg_style;
         lv_style_init(&run_bg_style);
         lv_style_set_bg_color(&run_bg_style, lv_color_black());
         lv_style_set_radius(&run_bg_style, 0);
         lv_style_set_border_width(&run_bg_style, 0);
         lv_style_set_pad_all(&run_bg_style, 0);
+        init_style_done = true;
+    }
 
-        run_bg = lv_obj_create(lcd_run_screen);
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
+    {
+
+        run_bg = lv_obj_create(current_screen);
         lv_obj_set_size(run_bg, 240, 210);
         lv_obj_align(run_bg, LV_ALIGN_TOP_LEFT, 0, 30);
         lv_obj_clear_flag(run_bg, LV_OBJ_FLAG_SCROLLABLE);
@@ -81,8 +76,6 @@ void WatchTft::run_screen()
         lv_obj_set_style_text_color(label_goal_step, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
         std::string goal_text = LV_SYMBOL_EYE_OPEN + std::to_string(WatchBma::step_counter_goal);
         lv_label_set_text(label_goal_step, goal_text.c_str());
-
-        display_top_bar(lcd_run_screen, "Run");
 
         xSemaphoreGive(xGuiSemaphore);
     }

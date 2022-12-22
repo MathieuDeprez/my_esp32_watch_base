@@ -1,7 +1,8 @@
 #include "WatchWiFi.h"
 
 EventGroupHandle_t WatchWiFi::s_wifi_event_group = NULL;
-bool connected = false;
+bool WatchWiFi::connected = false;
+bool WatchWiFi::enable = false;
 
 void WatchWiFi::init()
 {
@@ -39,9 +40,20 @@ void WatchWiFi::init()
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
 
     printf("wifi_init_sta finished.\n");
+}
+
+void WatchWiFi::connect()
+{
+    printf("WatchWiFi::connect\n");
+    ESP_ERROR_CHECK(esp_wifi_start());
+}
+
+void WatchWiFi::disconnect()
+{
+    printf("WatchWiFi::disconnect\n");
+    ESP_ERROR_CHECK(esp_wifi_stop());
 }
 
 void WatchWiFi::event_handler(void *arg, esp_event_base_t event_base,
@@ -49,15 +61,23 @@ void WatchWiFi::event_handler(void *arg, esp_event_base_t event_base,
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
-        esp_wifi_connect();
+        if (enable)
+        {
+            esp_wifi_connect();
+        }
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        connected = false;
-        esp_wifi_connect();
-        printf("retry to connect to the AP\n");
 
         printf("connect to the AP fail\n");
+
+        connected = false;
+        WatchTft::set_wifi_state(enable, connected);
+        if (enable)
+        {
+            esp_wifi_connect();
+            printf("retry to connect to the AP\n");
+        }
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
@@ -65,6 +85,7 @@ void WatchWiFi::event_handler(void *arg, esp_event_base_t event_base,
         printf("got ip:" IPSTR "\n", IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         connected = true;
+        WatchTft::set_wifi_state(enable, connected);
     }
 }
 

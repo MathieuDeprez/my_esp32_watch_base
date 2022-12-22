@@ -12,8 +12,12 @@ class WatchWiFi
 
 public:
     static EventGroupHandle_t s_wifi_event_group;
+    static bool connected;
+    static bool enable;
 
     static void init();
+    static void connect();
+    static void disconnect();
     static void download_tile(int32_t x, int32_t y);
 
 private:
