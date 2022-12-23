@@ -8,6 +8,9 @@
 class WatchPower
 {
     public:
+
+    static bool is_charging;
+    
     static void init();
     static void register_int_isr();
     static void enter_light_sleep();

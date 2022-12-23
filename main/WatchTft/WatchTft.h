@@ -52,6 +52,8 @@ public:
     static void set_wifi_state(bool enable, bool connected);
     static void set_gps_state(bool enable, bool fixed);
 
+    static void set_charge_state(bool state);
+
 private:
     enum class LCD_CMD : uint32_t
     {
@@ -140,6 +142,9 @@ private:
     static lv_obj_t *line_wifi;
     static lv_obj_t *img_gps;
     static lv_obj_t *line_gps;
+
+    static lv_point_t wifi_line_points[2];
+    static lv_point_t gps_line_points[2];
 
     static screen_index_t current_screen_index;
 

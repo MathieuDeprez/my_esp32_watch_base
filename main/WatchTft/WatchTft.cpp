@@ -40,6 +40,9 @@ lv_obj_t *WatchTft::line_wifi = NULL;
 lv_obj_t *WatchTft::img_gps = NULL;
 lv_obj_t *WatchTft::line_gps = NULL;
 
+lv_point_t WatchTft::wifi_line_points[2] = {};
+lv_point_t WatchTft::gps_line_points[2] = {};
+
 void WatchTft::init()
 {
     xGuiSemaphore = xSemaphoreCreateMutex();
@@ -182,6 +185,7 @@ void WatchTft::init_home_screen(void)
     lv_style_set_img_recolor(&img_recolor_white_style, lv_color_white());
 
     load_screen(screen_index_t::main);
+    set_charge_state(WatchPower::is_charging);
 }
 
 void WatchTft::load_main_screen()
@@ -461,7 +465,8 @@ void WatchTft::load_top_bar(const char *title)
         lv_obj_set_style_text_align(img_wifi, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_align(img_wifi, LV_ALIGN_RIGHT_MID, -40, 6);
 
-        static lv_point_t wifi_line_points[] = {{165, 8}, {184, 22}};
+        wifi_line_points[0] = {165 - WatchPower::is_charging * 5, 8};
+        wifi_line_points[1] = {184 - WatchPower::is_charging * 5, 22};
         line_wifi = lv_line_create(top_bar);
         lv_obj_set_size(line_wifi, 240, 30);
         lv_obj_align(line_wifi, LV_ALIGN_RIGHT_MID, 10, 0);
@@ -489,7 +494,8 @@ void WatchTft::load_top_bar(const char *title)
         lv_obj_set_style_text_align(img_gps, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_align(img_gps, LV_ALIGN_RIGHT_MID, -65, 4);
 
-        static lv_point_t gps_line_points[] = {{142, 8}, {161, 22}};
+        gps_line_points[0] = {142 - WatchPower::is_charging * 5, 8};
+        gps_line_points[1] = {161 - WatchPower::is_charging * 5, 22};
         line_gps = lv_line_create(top_bar);
         lv_obj_set_size(line_gps, 240, 30);
         lv_obj_align(line_gps, LV_ALIGN_RIGHT_MID, 10, 0);
@@ -572,6 +578,32 @@ void WatchTft::load_top_bar(const char *title)
         xSemaphoreGive(xGuiSemaphore);
     }
 }
+
+void WatchTft::set_charge_state(bool state)
+{
+    if (img_wifi == NULL)
+    {
+        return;
+    }
+
+    if (pdTRUE == xSemaphoreTake(xGuiSemaphore, 1000))
+    {
+        lv_obj_align(img_wifi, LV_ALIGN_RIGHT_MID, -40 - WatchPower::is_charging * 5, 6);
+        lv_obj_align(img_gps, LV_ALIGN_RIGHT_MID, -65 - WatchPower::is_charging * 5, 4);
+        lv_label_set_text(label_battery, WatchPower::is_charging ? "100%" LV_SYMBOL_CHARGE : "100%");
+
+        wifi_line_points[0] = {165 - WatchPower::is_charging * 5, 8};
+        wifi_line_points[1] = {184 - WatchPower::is_charging * 5, 22};
+        lv_line_set_points(line_wifi, wifi_line_points, 2);
+
+        gps_line_points[0] = {142 - WatchPower::is_charging * 5, 8};
+        gps_line_points[1] = {161 - WatchPower::is_charging * 5, 22};
+        lv_line_set_points(line_gps, gps_line_points, 2);
+
+        xSemaphoreGive(xGuiSemaphore);
+    }
+}
+
 void WatchTft::top_menu_event_handler(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -1082,6 +1114,10 @@ void WatchTft::set_battery_text(uint8_t percent)
         return;
     }
     std::string battery_percent = std::to_string(percent) + "%";
+    if (WatchPower::is_charging)
+    {
+        battery_percent += LV_SYMBOL_CHARGE;
+    }
     s_battery_percent = percent;
 
     if (xSemaphoreTake(xGuiSemaphore, 0) == pdTRUE)

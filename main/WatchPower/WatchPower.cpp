@@ -1,6 +1,7 @@
 #include "WatchPower.h"
 
 volatile bool WatchPower::_irq = false;
+bool WatchPower::is_charging = false;
 
 void WatchPower::init()
 {
@@ -9,6 +10,7 @@ void WatchPower::init()
     axp202_init();
 
     register_int_isr();
+    is_charging = axpxx_isVBUSPlug();
 
     xTaskCreatePinnedToCore(power_task, "power", 4096 * 2, NULL, 0, NULL, 1);
 }
@@ -109,10 +111,14 @@ void WatchPower::power_task(void *pvParameter)
             if (axpxx_isVbusPlugInIRQ())
             {
                 printf("axpxx_isVBUSPlug()\n");
+                is_charging = true;
+                WatchTft::set_charge_state(is_charging);
             }
             if (axpxx_isVbusRemoveIRQ())
             {
                 printf("axpxx_isVbusRemoveIRQ()\n");
+                is_charging = false;
+                WatchTft::set_charge_state(is_charging);
             }
             if (axpxx_isPEKLongtPressIRQ())
             {
